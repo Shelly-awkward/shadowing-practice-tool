@@ -262,12 +262,68 @@
 
                 <div class="section">
                     <h2 class="section-title">📝 逐字稿（每句一行）</h2>
-                    <div class="input-group">
-                        <textarea id="transcript" placeholder="每一句請分一行，例如：
+                    
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <button onclick="switchTranscriptMode('manual')" id="manualBtn" 
+                                style="flex: 1; padding: 10px; font-size: 1em; background: #667eea;">
+                            ✍️ 手動輸入
+                        </button>
+                        <button onclick="switchTranscriptMode('auto')" id="autoBtn"
+                                style="flex: 1; padding: 10px; font-size: 1em; background: #6b7280;">
+                            🤖 自動產生
+                        </button>
+                    </div>
+
+                    <!-- 手動輸入 -->
+                    <div id="manualTranscript">
+                        <div class="input-group">
+                            <textarea id="transcript" placeholder="每一句請分一行，例如：
 
 こんにちは、皆さん。
 今日はいい天気ですね。
 一緒に勉強しましょう。"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- 自動產生 -->
+                    <div id="autoTranscript" style="display: none;">
+                        <div class="info-box" style="margin-bottom: 15px;">
+                            <p><strong>💡 自動產生逐字稿：</strong></p>
+                            <p style="margin-top: 5px;">使用 OpenAI Whisper API 自動轉錄音訊（約 $0.006/分鐘）</p>
+                        </div>
+
+                        <div class="input-group">
+                            <label>OpenAI API Key</label>
+                            <input type="password" id="openaiKey" placeholder="sk-...">
+                            <small style="color: #718096; display: block; margin-top: 5px;">
+                                獲取 API Key: <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a>
+                            </small>
+                        </div>
+
+                        <div class="input-group">
+                            <label>音訊語言</label>
+                            <select id="audioLanguage" style="padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; width: 100%;">
+                                <option value="">自動偵測（推薦）</option>
+                                <option value="en">英文 (English)</option>
+                                <option value="zh">中文 (Chinese)</option>
+                                <option value="ja">日文 (Japanese)</option>
+                                <option value="ko">韓文 (Korean)</option>
+                                <option value="es">西班牙文 (Spanish)</option>
+                                <option value="fr">法文 (French)</option>
+                                <option value="de">德文 (German)</option>
+                            </select>
+                        </div>
+
+                        <button onclick="generateTranscript()" id="generateBtn" style="width: 100%; margin-bottom: 15px;">
+                            🤖 產生逐字稿
+                        </button>
+
+                        <div id="autoStatus"></div>
+
+                        <div class="input-group" style="margin-top: 15px;">
+                            <label>產生的逐字稿（可編輯）</label>
+                            <textarea id="generatedTranscript" placeholder="點上方按鈕自動產生..." style="min-height: 150px;"></textarea>
+                        </div>
                     </div>
                 </div>
 
@@ -327,10 +383,95 @@
         let recordedChunks = [];
         let recordedBlob = null;
 
+        // 切換逐字稿模式
+        function switchTranscriptMode(mode) {
+            const manualBtn = document.getElementById('manualBtn');
+            const autoBtn = document.getElementById('autoBtn');
+            const manualDiv = document.getElementById('manualTranscript');
+            const autoDiv = document.getElementById('autoTranscript');
+
+            if (mode === 'manual') {
+                manualBtn.style.background = '#667eea';
+                autoBtn.style.background = '#6b7280';
+                manualDiv.style.display = 'block';
+                autoDiv.style.display = 'none';
+            } else {
+                manualBtn.style.background = '#6b7280';
+                autoBtn.style.background = '#667eea';
+                manualDiv.style.display = 'none';
+                autoDiv.style.display = 'block';
+            }
+        }
+
+        // 自動產生逐字稿
+        async function generateTranscript() {
+            const apiKey = document.getElementById('openaiKey').value.trim();
+            const audioFile = document.getElementById('audioFile').files[0];
+            const language = document.getElementById('audioLanguage').value;
+            const statusDiv = document.getElementById('autoStatus');
+            const btn = document.getElementById('generateBtn');
+
+            if (!apiKey) {
+                statusDiv.innerHTML = '<div style="color: #ef4444; padding: 10px; background: #fee2e2; border-radius: 8px;">❌ 請輸入 API Key</div>';
+                return;
+            }
+
+            if (!audioFile) {
+                statusDiv.innerHTML = '<div style="color: #ef4444; padding: 10px; background: #fee2e2; border-radius: 8px;">❌ 請先上傳音訊檔案</div>';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '⏳ 處理中...';
+            statusDiv.innerHTML = '<div style="color: #0ea5e9; padding: 10px; background: #e0f2fe; border-radius: 8px;">🔄 正在轉錄音訊，請稍候...</div>';
+
+            try {
+                const formData = new FormData();
+                formData.append('file', audioFile);
+                formData.append('model', 'whisper-1');
+                if (language) {
+                    formData.append('language', language);
+                }
+
+                const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error?.message || '轉錄失敗');
+                }
+
+                const result = await response.json();
+                
+                // 將結果放入文字框
+                document.getElementById('generatedTranscript').value = result.text;
+                
+                statusDiv.innerHTML = '<div style="color: #10b981; padding: 10px; background: #d1fae5; border-radius: 8px;">✅ 逐字稿產生成功！請檢查並編輯後開始練習</div>';
+
+            } catch (error) {
+                statusDiv.innerHTML = `<div style="color: #ef4444; padding: 10px; background: #fee2e2; border-radius: 8px;">❌ 錯誤: ${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🤖 產生逐字稿';
+            }
+        }
+
         // 開始練習
         function startPractice() {
             const audioFile = document.getElementById('audioFile').files[0];
-            const transcript = document.getElementById('transcript').value.trim();
+            
+            // 檢查是手動輸入還是自動產生
+            let transcript;
+            if (document.getElementById('manualTranscript').style.display !== 'none') {
+                transcript = document.getElementById('transcript').value.trim();
+            } else {
+                transcript = document.getElementById('generatedTranscript').value.trim();
+            }
 
             if (!audioFile) {
                 alert('請上傳音訊檔案！');
@@ -338,7 +479,7 @@
             }
 
             if (!transcript) {
-                alert('請輸入逐字稿！');
+                alert('請輸入或產生逐字稿！');
                 return;
             }
 
