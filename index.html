@@ -657,7 +657,10 @@
                             卡拉 OK 模式
                         </label>
                         <small style="color: #718096; margin-top: 5px; display: block;">
-                            開啟後字幕會隨著音訊高亮變色
+                            字幕會隨著音訊高亮變色
+                        </small>
+                        <small style="color: #f59e0b; margin-top: 3px; display: block; font-weight: 500;" id="karaokeHint">
+                            💡 使用 Whisper API 產生逐字稿可獲得精確同步
                         </small>
                     </div>
                 </div>
@@ -877,23 +880,38 @@
             document.getElementById('playerContainer').classList.add('active');
             displayTranscript(transcriptText);
             document.getElementById('playerContainer').scrollIntoView({ behavior: 'smooth' });
+            
+            // 如果沒有時間戳記，顯示提示
+            if (!window.transcriptTimestamps) {
+                console.log('提示：使用 Whisper API 自動產生逐字稿可獲得精確的卡拉OK同步效果');
+            }
         }
 
         // 顯示逐字稿
         function displayTranscript(text) {
             const container = document.getElementById('transcriptDisplay');
-            const paragraphs = text.split('\n').filter(p => p.trim());
             
-            // 為卡拉OK模式準備：將文字拆分成單詞
-            const wordsHtml = paragraphs.map((p, pIndex) => {
-                const words = p.split(/(\s+)/).filter(w => w.trim());
-                const wordSpans = words.map((word, wIndex) => {
-                    return `<span class="transcript-word" data-index="${pIndex}-${wIndex}">${word}</span>`;
+            // 如果有時間戳記資料，使用精確模式
+            if (window.transcriptTimestamps && window.transcriptTimestamps.length > 0) {
+                const wordsHtml = window.transcriptTimestamps.map((wordData, index) => {
+                    return `<span class="transcript-word" 
+                                  data-index="${index}" 
+                                  data-start="${wordData.start}" 
+                                  data-end="${wordData.end}">${wordData.word}</span>`;
+                }).join(' ');
+                container.innerHTML = `<p>${wordsHtml}</p>`;
+            } else {
+                // 沒有時間戳記，使用基本模式
+                const paragraphs = text.split('\n').filter(p => p.trim());
+                const wordsHtml = paragraphs.map((p, pIndex) => {
+                    const words = p.split(/(\s+)/).filter(w => w.trim());
+                    const wordSpans = words.map((word, wIndex) => {
+                        return `<span class="transcript-word" data-index="${pIndex}-${wIndex}">${word}</span>`;
+                    }).join(' ');
+                    return `<p>${wordSpans}</p>`;
                 }).join('');
-                return `<p>${wordSpans}</p>`;
-            }).join('');
-            
-            container.innerHTML = wordsHtml;
+                container.innerHTML = wordsHtml;
+            }
             
             // 儲存單詞元素供卡拉OK使用
             transcriptWords = Array.from(container.querySelectorAll('.transcript-word'));
@@ -969,37 +987,72 @@
         // 卡拉OK模式
         function toggleKaraokeMode() {
             karaokeEnabled = document.getElementById('karaokeMode').checked;
+            const hint = document.getElementById('karaokeHint');
+            
             if (!karaokeEnabled) {
                 // 移除所有高亮
                 transcriptWords.forEach(word => {
                     word.classList.remove('karaoke-active');
+                    word.style.opacity = '1';
                 });
+            } else {
+                // 更新提示
+                if (window.transcriptTimestamps) {
+                    hint.textContent = '✅ 已啟用精確同步模式';
+                    hint.style.color = '#10b981';
+                } else {
+                    hint.textContent = '⚠️ 使用簡單模式（建議用 Whisper API 產生逐字稿獲得精確同步）';
+                    hint.style.color = '#f59e0b';
+                }
             }
         }
 
         function updateKaraoke() {
             if (!karaokeEnabled || transcriptWords.length === 0) return;
             
-            const duration = audio.duration;
             const currentTime = audio.currentTime;
             
-            // 簡單的時間比例計算（實際應用中需要更精確的時間戳）
-            const progress = currentTime / duration;
-            const activeIndex = Math.floor(progress * transcriptWords.length);
-            
-            transcriptWords.forEach((word, index) => {
-                if (index === activeIndex) {
-                    word.classList.add('karaoke-active');
-                    // 自動滾動到當前單詞
-                    word.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                } else if (index < activeIndex) {
-                    word.classList.remove('karaoke-active');
-                    word.style.opacity = '0.6';
-                } else {
-                    word.classList.remove('karaoke-active');
-                    word.style.opacity = '1';
-                }
-            });
+            // 如果有精確的時間戳記，使用它們
+            if (window.transcriptTimestamps && window.transcriptTimestamps.length > 0) {
+                transcriptWords.forEach((wordElement, index) => {
+                    const start = parseFloat(wordElement.dataset.start);
+                    const end = parseFloat(wordElement.dataset.end);
+                    
+                    if (currentTime >= start && currentTime <= end) {
+                        // 當前正在說的單詞
+                        wordElement.classList.add('karaoke-active');
+                        wordElement.style.opacity = '1';
+                        // 自動滾動
+                        wordElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    } else if (currentTime > end) {
+                        // 已經說過的單詞
+                        wordElement.classList.remove('karaoke-active');
+                        wordElement.style.opacity = '0.5';
+                    } else {
+                        // 還沒說到的單詞
+                        wordElement.classList.remove('karaoke-active');
+                        wordElement.style.opacity = '1';
+                    }
+                });
+            } else {
+                // 沒有時間戳記，使用簡單的比例計算
+                const duration = audio.duration;
+                const progress = currentTime / duration;
+                const activeIndex = Math.floor(progress * transcriptWords.length);
+                
+                transcriptWords.forEach((word, index) => {
+                    if (index === activeIndex) {
+                        word.classList.add('karaoke-active');
+                        word.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    } else if (index < activeIndex) {
+                        word.classList.remove('karaoke-active');
+                        word.style.opacity = '0.6';
+                    } else {
+                        word.classList.remove('karaoke-active');
+                        word.style.opacity = '1';
+                    }
+                });
+            }
         }
 
         // 錄音功能
@@ -1150,18 +1203,58 @@
             btn.textContent = '⏳ 處理中...';
             
             const langText = language ? getLanguageName(language) : '自動偵測';
-            showStatus(statusDiv, 'info', `正在使用 ${langText} 轉錄音訊，這可能需要幾分鐘...`);
+            showStatus(statusDiv, 'info', `正在使用 ${langText} 轉錄音訊並生成時間戳，這可能需要幾分鐘...`);
 
             try {
                 const formData = new FormData();
                 formData.append('file', audioFile);
                 formData.append('model', 'whisper-1');
+                formData.append('response_format', 'verbose_json');
+                formData.append('timestamp_granularities[]', 'word');
                 
                 // 只有在指定語言時才加入 language 參數
                 // 不指定時 Whisper 會自動偵測
                 if (language) {
                     formData.append('language', language);
                 }
+
+                const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error?.message || '轉錄失敗');
+                }
+
+                const result = await response.json();
+                
+                // 儲存時間戳記資料
+                if (result.words) {
+                    window.transcriptTimestamps = result.words;
+                    console.log('已獲取單詞時間戳:', result.words);
+                    showStatus(statusDiv, 'success', '✅ 逐字稿和時間戳產生成功！卡拉OK模式現在會精確同步');
+                } else {
+                    window.transcriptTimestamps = null;
+                    showStatus(statusDiv, 'success', '✅ 逐字稿產生成功！（未包含時間戳）');
+                }
+                
+                document.getElementById('transcript').value = result.text;
+                
+                // 自動切換到手動輸入分頁
+                document.querySelector('.tab').click();
+
+            } catch (error) {
+                showStatus(statusDiv, 'error', '❌ 錯誤: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🤖 使用 Whisper 產生逐字稿';
+            }
+        }
 
                 const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
                     method: 'POST',
