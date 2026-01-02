@@ -400,13 +400,64 @@
 
             <div class="section">
                 <h2 class="section-title">📁 載入音訊</h2>
-                <div class="input-group">
-                    <label>音訊網址（例如：podcast 的 MP3 連結）</label>
-                    <input type="url" id="audioUrl" placeholder="https://example.com/audio.mp3">
+                
+                <div class="info-box">
+                    <p><strong>💡 支援多種來源：</strong></p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>直接音訊網址</strong>：MP3、M4A 等格式的直接連結</li>
+                        <li><strong>Podcast</strong>：Apple Podcasts、Spotify 等（需要找到實際音訊檔連結）</li>
+                        <li><strong>YouTube</strong>：貼上影片網址，自動提取音訊</li>
+                        <li><strong>本地檔案</strong>：從電腦上傳音訊檔</li>
+                    </ul>
                 </div>
-                <div class="input-group">
-                    <label>或上傳本地音訊檔案</label>
-                    <input type="file" id="audioFile" accept="audio/*">
+
+                <div class="tab-container">
+                    <button class="tab active" onclick="switchAudioTab('url')">🌐 網址</button>
+                    <button class="tab" onclick="switchAudioTab('youtube')">📺 YouTube</button>
+                    <button class="tab" onclick="switchAudioTab('upload')">📁 上傳檔案</button>
+                </div>
+
+                <!-- 網址輸入 -->
+                <div id="url-audio-tab" class="tab-content active">
+                    <div class="input-group">
+                        <label>音訊直接連結（MP3、M4A 等）</label>
+                        <input type="url" id="audioUrl" placeholder="https://example.com/audio.mp3">
+                        <small style="color: #718096; display: block; margin-top: 5px;">
+                            例如：Podcast 的 MP3 檔案連結
+                        </small>
+                    </div>
+                    <button onclick="loadFromUrl()" class="secondary">🔗 載入音訊</button>
+                    <div id="urlStatus"></div>
+                </div>
+
+                <!-- YouTube -->
+                <div id="youtube-audio-tab" class="tab-content">
+                    <div class="input-group">
+                        <label>YouTube 影片網址</label>
+                        <input type="url" id="youtubeVideoUrl" placeholder="https://www.youtube.com/watch?v=...">
+                    </div>
+                    <button onclick="loadFromYouTube()">📺 載入 YouTube 音訊</button>
+                    <div id="youtubeAudioStatus"></div>
+                    
+                    <div class="warning-box" style="margin-top: 15px;">
+                        <p><strong>💡 提示：</strong>由於瀏覽器限制，YouTube 音訊提取需要使用第三方服務。推薦方式：</p>
+                        <ol style="margin-left: 20px; margin-top: 10px;">
+                            <li>使用 <a href="https://yt1s.com/" target="_blank">yt1s.com</a> 下載音訊</li>
+                            <li>下載後在「上傳檔案」分頁上傳</li>
+                        </ol>
+                        <p style="margin-top: 10px;"><strong>或者</strong>：在下方「逐字稿」區使用「YouTube 字幕提取」功能！</p>
+                    </div>
+                </div>
+
+                <!-- 上傳檔案 -->
+                <div id="upload-audio-tab" class="tab-content">
+                    <div class="input-group">
+                        <label>從電腦上傳音訊檔案</label>
+                        <input type="file" id="audioFile" accept="audio/*">
+                        <small style="color: #718096; display: block; margin-top: 5px;">
+                            支援：MP3, M4A, WAV, OGG 等格式
+                        </small>
+                    </div>
                 </div>
             </div>
 
@@ -416,6 +467,7 @@
                 <div class="tab-container">
                     <button class="tab active" onclick="switchTab('manual')">手動輸入</button>
                     <button class="tab" onclick="switchTab('auto')">自動產生</button>
+                    <button class="tab" onclick="switchTab('youtube')">YouTube 字幕</button>
                 </div>
 
                 <!-- 手動輸入 -->
@@ -434,6 +486,41 @@
                         </button>
                     </div>
                     <div id="autoStatus"></div>
+                </div>
+
+                <!-- YouTube 字幕 -->
+                <div id="youtube-tab" class="tab-content">
+                    <div class="info-box">
+                        <p><strong>💡 如何取得 YouTube 字幕：</strong></p>
+                        <ol style="margin-left: 20px; margin-top: 10px;">
+                            <li>打開 YouTube 影片</li>
+                            <li>點擊影片下方的「...」(更多)</li>
+                            <li>選擇「顯示完整記錄」</li>
+                            <li>複製所有文字</li>
+                            <li>貼到下方文字框</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>YouTube 影片網址（選填，用於記錄）</label>
+                        <input type="url" id="youtubeTranscriptUrl" placeholder="https://www.youtube.com/watch?v=...">
+                    </div>
+
+                    <div class="input-group">
+                        <label>貼上從 YouTube 複製的字幕</label>
+                        <textarea id="youtubeTranscriptText" placeholder="從 YouTube「顯示完整記錄」複製的文字..."></textarea>
+                    </div>
+
+                    <button onclick="processYouTubeTranscript()">✨ 處理並使用字幕</button>
+                    <div id="youtubeTranscriptStatus"></div>
+
+                    <div class="warning-box" style="margin-top: 15px;">
+                        <p><strong>或使用線上工具：</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 5px;">
+                            <li><a href="https://downsub.com/" target="_blank">DownSub</a> - 下載字幕檔</li>
+                            <li><a href="https://youtubetranscript.com/" target="_blank">YouTube Transcript</a> - 取得文字稿</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
 
@@ -547,6 +634,19 @@
             document.getElementById(tabName + '-api-tab').classList.add('active');
         }
 
+        // 切換音訊來源分頁
+        function switchAudioTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            document.querySelectorAll('#url-audio-tab, #youtube-audio-tab, #upload-audio-tab').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabName + '-audio-tab').classList.add('active');
+        }
+
         // 切換逐字稿分頁
         function switchTab(tabName) {
             document.querySelectorAll('.tab').forEach(tab => {
@@ -558,6 +658,80 @@
                 content.classList.remove('active');
             });
             document.getElementById(tabName + '-tab').classList.add('active');
+        }
+
+        // 從網址載入音訊
+        function loadFromUrl() {
+            const audioUrl = document.getElementById('audioUrl').value.trim();
+            const statusDiv = document.getElementById('urlStatus');
+
+            if (!audioUrl) {
+                showStatus(statusDiv, 'error', '❌ 請輸入音訊網址');
+                return;
+            }
+
+            try {
+                audio.src = audioUrl;
+                showStatus(statusDiv, 'success', '✅ 音訊已載入！現在可以設定逐字稿並開始練習');
+            } catch (error) {
+                showStatus(statusDiv, 'error', '❌ 載入失敗：' + error.message);
+            }
+        }
+
+        // 從 YouTube 載入（提示用戶使用工具）
+        function loadFromYouTube() {
+            const youtubeUrl = document.getElementById('youtubeVideoUrl').value.trim();
+            const statusDiv = document.getElementById('youtubeAudioStatus');
+
+            if (!youtubeUrl) {
+                showStatus(statusDiv, 'error', '❌ 請輸入 YouTube 影片網址');
+                return;
+            }
+
+            if (!youtubeUrl.includes('youtube.com') && !youtubeUrl.includes('youtu.be')) {
+                showStatus(statusDiv, 'error', '❌ 請輸入有效的 YouTube 網址');
+                return;
+            }
+
+            showStatus(statusDiv, 'info', 
+                '💡 由於瀏覽器限制，請使用以下方式：<br>' +
+                '1. 使用 <a href="https://yt1s.com/" target="_blank" style="color: #667eea;">yt1s.com</a> 下載音訊<br>' +
+                '2. 在「上傳檔案」分頁上傳音訊<br>' +
+                '3. 在「逐字稿」→「YouTube 字幕」提取字幕'
+            );
+        }
+
+        // 處理 YouTube 字幕
+        function processYouTubeTranscript() {
+            const transcriptText = document.getElementById('youtubeTranscriptText').value.trim();
+            const statusDiv = document.getElementById('youtubeTranscriptStatus');
+
+            if (!transcriptText) {
+                showStatus(statusDiv, 'error', '❌ 請貼上 YouTube 字幕內容');
+                return;
+            }
+
+            // 清理 YouTube 字幕格式（移除時間戳記）
+            let cleaned = transcriptText
+                // 移除時間戳 (例如: 0:00, 1:23)
+                .replace(/\d+:\d+/g, '')
+                // 移除多餘空白
+                .replace(/\s+/g, ' ')
+                // 按句號分段
+                .split(/[.!?]+/)
+                .map(s => s.trim())
+                .filter(s => s.length > 0)
+                .join('\n');
+
+            // 放到主要逐字稿區
+            document.getElementById('transcript').value = cleaned;
+            
+            showStatus(statusDiv, 'success', '✅ 字幕已處理並載入！可以開始練習了');
+            
+            // 切換到手動輸入分頁顯示結果
+            setTimeout(() => {
+                document.querySelector('.tab').click();
+            }, 500);
         }
 
         // 載入音訊
