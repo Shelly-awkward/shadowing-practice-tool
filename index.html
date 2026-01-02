@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shadowing 練習工具 Pro</title>
+    <title>Shadowing 逐句練習工具</title>
     <style>
         * {
             margin: 0;
@@ -12,14 +12,14 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
         }
 
         .container {
-            max-width: 900px;
+            max-width: 1000px;
             margin: 0 auto;
             background: white;
             border-radius: 20px;
@@ -39,11 +39,6 @@
             margin-bottom: 10px;
         }
 
-        .header p {
-            opacity: 0.9;
-            font-size: 1.1em;
-        }
-
         .content {
             padding: 30px;
         }
@@ -59,6 +54,15 @@
             font-weight: 600;
         }
 
+        .info-box {
+            background: #ebf4ff;
+            border-left: 4px solid #4299e1;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            color: #2c5282;
+        }
+
         .input-group {
             margin-bottom: 20px;
         }
@@ -70,34 +74,27 @@
             font-weight: 500;
         }
 
-        input[type="text"], input[type="file"], input[type="url"], input[type="password"], textarea {
+        input[type="file"], input[type="url"], textarea {
             width: 100%;
             padding: 12px;
             border: 2px solid #e2e8f0;
             border-radius: 8px;
             font-size: 1em;
-            transition: all 0.3s;
-        }
-
-        input[type="text"]:focus, input[type="url"]:focus, input[type="password"]:focus, textarea:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
         textarea {
-            min-height: 150px;
-            resize: vertical;
+            min-height: 200px;
             font-family: inherit;
+            line-height: 1.6;
         }
 
         button {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 12px 24px;
+            padding: 15px 30px;
             border-radius: 8px;
-            font-size: 1em;
+            font-size: 1.1em;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
@@ -108,1101 +105,359 @@
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         }
 
-        button:active {
-            transform: translateY(0);
-        }
-
         button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
             transform: none;
         }
 
-        button.secondary {
-            background: #718096;
-        }
-
-        button.danger {
-            background: #e53e3e;
-        }
-
-        .player-container {
-            background: #f7fafc;
-            padding: 25px;
-            border-radius: 12px;
-            margin-bottom: 30px;
+        .practice-area {
             display: none;
+            background: #f7fafc;
+            padding: 30px;
+            border-radius: 12px;
         }
 
-        .player-container.active {
+        .practice-area.active {
             display: block;
         }
 
-        audio {
-            width: 100%;
-            margin-bottom: 20px;
-        }
-
-        .controls {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .control-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .control-group label {
-            font-size: 0.9em;
-            margin-bottom: 5px;
-        }
-
-        .control-group input[type="range"] {
-            width: 100%;
-        }
-
-        .control-group select {
-            padding: 8px;
-            border: 2px solid #e2e8f0;
-            border-radius: 6px;
-            font-size: 1em;
-        }
-
-        .speed-display {
-            font-weight: 600;
-            color: #667eea;
-            margin-top: 5px;
-            font-size: 0.95em;
-        }
-
-        .transcript-container {
+        .sentence-display {
             background: white;
-            padding: 25px;
+            padding: 30px;
             border-radius: 12px;
-            border: 2px solid #e2e8f0;
-            max-height: 400px;
-            overflow-y: auto;
-            line-height: 1.8;
-            font-size: 1.1em;
+            margin-bottom: 30px;
+            min-height: 150px;
         }
 
-        .transcript-container p {
-            margin-bottom: 15px;
-            color: #2d3748;
-        }
-
-        .karaoke-active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white !important;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-weight: 600;
-            transform: scale(1.05);
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-        }
-
-        .transcript-word {
-            display: inline-block;
-            margin: 0 2px;
+        .sentence-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            transition: all 0.3s;
             cursor: pointer;
-            transition: all 0.2s;
         }
 
-        .transcript-word:hover {
-            background-color: #e6f7ff;
-            border-radius: 3px;
-            padding: 2px 4px;
+        .sentence-item:hover {
+            background: #f0f9ff;
         }
 
-        .highlighted {
-            background-color: #fef3c7;
-            padding: 2px 4px;
-            border-radius: 3px;
+        .sentence-item.completed {
+            background: #d1fae5;
+            border-left: 4px solid #10b981;
+        }
+
+        .sentence-item.current {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            font-size: 1.3em;
+            font-weight: 600;
+            padding: 25px;
+        }
+
+        .progress-info {
+            text-align: center;
+            font-size: 1.2em;
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .status-box {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .status-box.listening {
+            background: #e0f2fe;
+            border: 2px solid #0ea5e9;
+        }
+
+        .status-box.recording {
+            background: #fee2e2;
+            border: 2px solid #ef4444;
+        }
+
+        .status-box.completed {
+            background: #dcfce7;
+            border: 2px solid #22c55e;
+        }
+
+        .waveform-container {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+
+        canvas {
+            width: 100%;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
         }
 
         .button-group {
             display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
         }
 
-        .info-box {
-            background: #ebf4ff;
-            border-left: 4px solid #4299e1;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 4px;
+        .btn-next {
+            background: #10b981;
         }
 
-        .info-box p, .info-box ul {
-            color: #2c5282;
-            line-height: 1.6;
+        .btn-retry {
+            background: #f59e0b;
         }
 
-        .warning-box {
-            background: #fef5e7;
-            border-left: 4px solid #f39c12;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 4px;
+        .btn-skip {
+            background: #6b7280;
         }
 
-        .warning-box p {
-            color: #7d6608;
-            line-height: 1.6;
-        }
-
-        .security-box {
-            background: #f0fdf4;
-            border-left: 4px solid #10b981;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 4px;
-        }
-
-        .security-box p, .security-box ul {
-            color: #065f46;
-            line-height: 1.6;
-        }
-
-        .status-message {
-            margin-top: 10px;
-            padding: 10px;
-            border-radius: 6px;
-            font-size: 0.95em;
-        }
-
-        .status-message.info {
-            background: #e6f7ff;
-            color: #0066cc;
-        }
-
-        .status-message.success {
-            background: #f0f9ff;
-            color: #047857;
-        }
-
-        .status-message.error {
-            background: #fff1f0;
-            color: #dc2626;
-        }
-
-        .tab-container {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #e2e8f0;
-        }
-
-        .tab {
-            padding: 12px 24px;
-            background: none;
-            border: none;
-            border-radius: 0;
-            color: #718096;
-            cursor: pointer;
-            transition: all 0.3s;
-            position: relative;
-        }
-
-        .tab:hover {
-            color: #667eea;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .tab.active {
-            color: #667eea;
-            font-weight: 600;
-        }
-
-        .tab.active::after {
-            content: '';
-            position: absolute;
-            bottom: -2px;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: #667eea;
-        }
-
-        .tab-content {
+        audio {
             display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .api-key-display {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .api-key-display small {
-            color: #10b981;
-            font-weight: 500;
-        }
-
-        @media (max-width: 600px) {
-            .header h1 {
-                font-size: 1.5em;
-            }
-            
-            .content {
-                padding: 20px;
-            }
-            
-            .controls {
-                grid-template-columns: 1fr;
-            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎧 Shadowing 練習工具 Pro</h1>
-            <p>跟讀練習，提升聽說能力</p>
+            <h1>🎧 Shadowing 逐句練習</h1>
+            <p>專注練習，逐句進步</p>
         </div>
 
         <div class="content">
-            <div class="security-box">
-                <p><strong>🔒 隱私保護：</strong></p>
-                <ul style="margin-left: 20px; margin-top: 10px;">
-                    <li>你的 API Key 只會儲存在<strong>你的瀏覽器本地</strong>，不會上傳到任何伺服器</li>
-                    <li>即使此程式碼公開在 GitHub，你的 Key 仍然是安全的</li>
-                    <li>可隨時清除已儲存的 API Key</li>
-                </ul>
-            </div>
-
-            <!-- API Key 設定區 -->
-            <div class="section">
-                <h2 class="section-title">🔑 API 設定（僅需設定一次）</h2>
-                
-                <div class="tab-container">
-                    <button class="tab active" onclick="switchApiTab('openai')">OpenAI</button>
-                    <button class="tab" onclick="switchApiTab('assemblyai')">AssemblyAI</button>
-                </div>
-
-                <!-- OpenAI 設定 -->
-                <div id="openai-api-tab" class="tab-content active">
-                    <div class="input-group">
-                        <label>OpenAI API Key</label>
-                        <input type="password" id="openaiKey" placeholder="sk-...">
-                        <div class="button-group" style="margin-top: 10px;">
-                            <button onclick="saveApiKey('openai')">💾 儲存到本地</button>
-                            <button class="secondary" onclick="loadApiKey('openai')">📥 載入已儲存的 Key</button>
-                            <button class="danger" onclick="clearApiKey('openai')">🗑️ 清除</button>
-                        </div>
-                        <div id="openaiKeyStatus"></div>
-                    </div>
-                </div>
-
-                <!-- AssemblyAI 設定 -->
-                <div id="assemblyai-api-tab" class="tab-content">
-                    <div class="input-group">
-                        <label>AssemblyAI API Key</label>
-                        <input type="password" id="assemblyaiKey" placeholder="你的 AssemblyAI Key">
-                        <div class="button-group" style="margin-top: 10px;">
-                            <button onclick="saveApiKey('assemblyai')">💾 儲存到本地</button>
-                            <button class="secondary" onclick="loadApiKey('assemblyai')">📥 載入已儲存的 Key</button>
-                            <button class="danger" onclick="clearApiKey('assemblyai')">🗑️ 清除</button>
-                        </div>
-                        <div id="assemblyaiKeyStatus"></div>
-                    </div>
-                </div>
-
-                <div class="info-box" style="margin-top: 15px;">
-                    <p><strong>💡 如何取得 API Key？</strong></p>
-                    <ul style="margin-left: 20px; margin-top: 5px;">
-                        <li><strong>OpenAI</strong>: <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a> (約 $0.006/分鐘)</li>
-                        <li><strong>AssemblyAI</strong>: <a href="https://www.assemblyai.com/" target="_blank">assemblyai.com</a> (有免費額度)</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="section">
-                <h2 class="section-title">📁 載入音訊</h2>
-                
+            <!-- 設定區 -->
+            <div id="setupArea">
                 <div class="info-box">
-                    <p><strong>💡 支援多種來源：</strong></p>
-                    <ul style="margin-left: 20px; margin-top: 10px;">
-                        <li><strong>直接音訊網址</strong>：MP3、M4A 等格式的直接連結</li>
-                        <li><strong>Podcast</strong>：Apple Podcasts、Spotify 等（需要找到實際音訊檔連結）</li>
-                        <li><strong>YouTube</strong>：貼上影片網址，自動提取音訊</li>
-                        <li><strong>本地檔案</strong>：從電腦上傳音訊檔</li>
+                    <p><strong>💡 使用方式：</strong></p>
+                    <ul style="margin-left: 20px; margin-top: 10px; line-height: 1.8;">
+                        <li>上傳音訊檔案</li>
+                        <li>輸入逐字稿（每一句分一行）</li>
+                        <li>系統會自動：播放2次 → 錄音 → 顯示波形</li>
+                        <li>你可以選擇：下一句 or 再練一次</li>
                     </ul>
                 </div>
 
-                <div class="tab-container">
-                    <button class="tab active" onclick="switchAudioTab(event, 'url')">🌐 網址</button>
-                    <button class="tab" onclick="switchAudioTab(event, 'youtube')">📺 YouTube</button>
-                    <button class="tab" onclick="switchAudioTab(event, 'upload')">📁 上傳檔案</button>
-                </div>
-
-                <!-- 網址輸入 -->
-                <div id="url-audio-tab" class="tab-content active">
+                <div class="section">
+                    <h2 class="section-title">📁 上傳音訊</h2>
                     <div class="input-group">
-                        <label>音訊直接連結（MP3、M4A 等）</label>
-                        <input type="url" id="audioUrl" placeholder="https://example.com/audio.mp3">
-                        <small style="color: #718096; display: block; margin-top: 5px;">
-                            例如：Podcast 的 MP3 檔案連結
-                        </small>
-                    </div>
-                    <button onclick="loadFromUrl()" class="secondary">🔗 載入音訊</button>
-                    <div id="urlStatus"></div>
-                </div>
-
-                <!-- YouTube -->
-                <div id="youtube-audio-tab" class="tab-content">
-                    <div class="input-group">
-                        <label>YouTube 影片網址</label>
-                        <input type="url" id="youtubeVideoUrl" placeholder="https://www.youtube.com/watch?v=...">
-                    </div>
-                    <button onclick="loadFromYouTube()">📺 載入 YouTube 音訊</button>
-                    <div id="youtubeAudioStatus"></div>
-                    
-                    <div class="warning-box" style="margin-top: 15px;">
-                        <p><strong>💡 提示：</strong>由於瀏覽器限制，YouTube 音訊提取需要使用第三方服務。推薦方式：</p>
-                        <ol style="margin-left: 20px; margin-top: 10px;">
-                            <li>使用 <a href="https://yt1s.com/" target="_blank">yt1s.com</a> 下載音訊</li>
-                            <li>下載後在「上傳檔案」分頁上傳</li>
-                        </ol>
-                        <p style="margin-top: 10px;"><strong>或者</strong>：在下方「逐字稿」區使用「YouTube 字幕提取」功能！</p>
-                    </div>
-                </div>
-
-                <!-- 上傳檔案 -->
-                <div id="upload-audio-tab" class="tab-content">
-                    <div class="input-group">
-                        <label>從電腦上傳音訊檔案</label>
+                        <label>選擇音訊檔案</label>
                         <input type="file" id="audioFile" accept="audio/*">
-                        <small style="color: #718096; display: block; margin-top: 5px;">
-                            支援：MP3, M4A, WAV, OGG 等格式
-                        </small>
-                    </div>
-                </div>
-            </div>
-
-            <div class="section">
-                <h2 class="section-title">📝 逐字稿</h2>
-                
-                <div class="tab-container">
-                    <button class="tab active" onclick="switchTab(event, 'manual')">手動輸入</button>
-                    <button class="tab" onclick="switchTab(event, 'auto')">自動產生</button>
-                    <button class="tab" onclick="switchTab(event, 'youtube')">YouTube 字幕</button>
-                </div>
-
-                <!-- 手動輸入 -->
-                <div id="manual-tab" class="tab-content active">
-                    <div class="input-group">
-                        <label>貼上或輸入逐字稿內容（每段分行）</label>
-                        <textarea id="transcript" placeholder="輸入逐字稿內容...&#10;&#10;每一段落請分行&#10;這樣可以更容易跟著練習"></textarea>
-                    </div>
-                </div>
-
-                <!-- 自動產生 -->
-                <div id="auto-tab" class="tab-content">
-                    <div class="input-group">
-                        <label>音訊語言</label>
-                        <select id="audioLanguage" style="padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1em; width: 100%;">
-                            <option value="">自動偵測（推薦）</option>
-                            <option value="en">英文 (English)</option>
-                            <option value="zh">中文 (Chinese)</option>
-                            <option value="ja">日文 (Japanese)</option>
-                            <option value="ko">韓文 (Korean)</option>
-                            <option value="es">西班牙文 (Spanish)</option>
-                            <option value="fr">法文 (French)</option>
-                            <option value="de">德文 (German)</option>
-                            <option value="it">義大利文 (Italian)</option>
-                            <option value="pt">葡萄牙文 (Portuguese)</option>
-                            <option value="ru">俄文 (Russian)</option>
-                            <option value="ar">阿拉伯文 (Arabic)</option>
-                            <option value="hi">印地文 (Hindi)</option>
-                            <option value="th">泰文 (Thai)</option>
-                            <option value="vi">越南文 (Vietnamese)</option>
-                        </select>
-                        <small style="color: #718096; display: block; margin-top: 5px;">
-                            建議選擇「自動偵測」，Whisper 會自動判斷語言
-                        </small>
-                    </div>
-                    
-                    <div class="button-group">
-                        <button onclick="generateWithWhisper()" id="whisperBtn">
-                            🤖 使用 Whisper 產生逐字稿
-                        </button>
-                    </div>
-                    <div id="autoStatus"></div>
-                </div>
-
-                <!-- YouTube 字幕 -->
-                <div id="youtube-tab" class="tab-content">
-                    <div class="info-box">
-                        <p><strong>💡 如何取得 YouTube 字幕：</strong></p>
-                        <ol style="margin-left: 20px; margin-top: 10px;">
-                            <li>打開 YouTube 影片</li>
-                            <li>點擊影片下方的「...」(更多)</li>
-                            <li>選擇「顯示完整記錄」</li>
-                            <li>複製所有文字</li>
-                            <li>貼到下方文字框</li>
-                        </ol>
-                    </div>
-                    
-                    <div class="input-group">
-                        <label>YouTube 影片網址（選填，用於記錄）</label>
-                        <input type="url" id="youtubeTranscriptUrl" placeholder="https://www.youtube.com/watch?v=...">
-                    </div>
-
-                    <div class="input-group">
-                        <label>貼上從 YouTube 複製的字幕</label>
-                        <textarea id="youtubeTranscriptText" placeholder="從 YouTube「顯示完整記錄」複製的文字..."></textarea>
-                    </div>
-
-                    <button onclick="processYouTubeTranscript()">✨ 處理並使用字幕</button>
-                    <div id="youtubeTranscriptStatus"></div>
-
-                    <div class="warning-box" style="margin-top: 15px;">
-                        <p><strong>或使用線上工具：</strong></p>
-                        <ul style="margin-left: 20px; margin-top: 5px;">
-                            <li><a href="https://downsub.com/" target="_blank">DownSub</a> - 下載字幕檔</li>
-                            <li><a href="https://youtubetranscript.com/" target="_blank">YouTube Transcript</a> - 取得文字稿</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-
-            <div class="button-group">
-                <button onclick="loadAudio()">▶️ 開始練習</button>
-                <button onclick="resetAll()" class="secondary">🔄 重新設定</button>
-            </div>
-
-            <div class="player-container" id="playerContainer">
-                <!-- 播放控制區 -->
-                <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                    <h3 style="color: #667eea; margin-bottom: 15px;">🎵 播放控制</h3>
-                    
-                    <audio id="audioPlayer" style="display: none;">
-                        您的瀏覽器不支援音訊播放。
-                    </audio>
-                    
-                    <div class="button-group" style="margin-bottom: 15px;">
-                        <button onclick="togglePlay()" id="playBtn" style="font-size: 1.2em; padding: 15px 30px;">
-                            ▶️ 播放
-                        </button>
-                        <button onclick="toggleRecord()" id="recordBtn" style="background: #e53e3e; font-size: 1.2em; padding: 15px 30px;">
-                            🎤 開始錄音
-                        </button>
-                        <button onclick="playRecording()" id="playRecordBtn" style="background: #10b981; display: none; font-size: 1.2em; padding: 15px 30px;">
-                            🔊 播放錄音
-                        </button>
-                        <button onclick="compareAudio()" id="compareBtn" style="background: #f59e0b; display: none; font-size: 1.2em; padding: 15px 30px;">
-                            📊 比對發音
-                        </button>
-                    </div>
-                    
-                    <!-- 進度條 -->
-                    <div style="margin-bottom: 15px;">
-                        <input type="range" id="progressBar" min="0" max="100" value="0" 
-                               style="width: 100%; height: 8px; cursor: pointer;"
-                               oninput="seekAudio(this.value)">
-                        <div style="display: flex; justify-content: space-between; font-size: 0.9em; color: #718096;">
-                            <span id="currentTime">0:00</span>
-                            <span id="duration">0:00</span>
-                        </div>
-                    </div>
-                    
-                    <div id="recordingStatus" style="margin-top: 10px;"></div>
-                </div>
-
-                <div class="controls">
-                    <div class="control-group">
-                        <label>播放速度</label>
-                        <input type="range" id="speedControl" min="0.5" max="2" step="0.1" value="1">
-                        <div class="speed-display" id="speedDisplay">1.0x</div>
-                    </div>
-
-                    <div class="control-group">
-                        <label>循環播放區間</label>
-                        <select id="loopSelect" onchange="updateLoopTimes()">
-                            <option value="none">關閉循環</option>
-                            <option value="5">每 5 秒循環</option>
-                            <option value="10">每 10 秒循環</option>
-                            <option value="15">每 15 秒循環</option>
-                            <option value="30">每 30 秒循環</option>
-                            <option value="custom">自訂區間</option>
-                        </select>
-                    </div>
-
-                    <div class="control-group" id="customLoopGroup" style="display: none;">
-                        <label>自訂開始時間（秒）</label>
-                        <input type="number" id="loopStart" min="0" step="1" value="0">
-                    </div>
-
-                    <div class="control-group" id="customLoopEndGroup" style="display: none;">
-                        <label>自訂結束時間（秒）</label>
-                        <input type="number" id="loopEnd" min="0" step="1" value="10">
-                    </div>
-                    
-                    <div class="control-group">
-                        <label style="display: flex; align-items: center; gap: 10px;">
-                            <input type="checkbox" id="karaokeMode" onchange="toggleKaraokeMode()" 
-                                   style="width: auto; height: 20px;">
-                            卡拉 OK 模式
-                        </label>
-                        <small style="color: #718096; margin-top: 5px; display: block;">
-                            字幕會隨著音訊高亮變色
-                        </small>
-                        <small style="color: #f59e0b; margin-top: 3px; display: block; font-weight: 500;" id="karaokeHint">
-                            💡 使用 Whisper API 產生逐字稿可獲得精確同步
-                        </small>
-                    </div>
-                    
-                    <div class="control-group">
-                        <label style="display: flex; align-items: center; gap: 10px;">
-                            <input type="checkbox" id="autoScrollMode" checked
-                                   style="width: auto; height: 20px;">
-                            自動滾動
-                        </label>
-                        <small style="color: #718096; margin-top: 5px; display: block;">
-                            跟隨當前播放位置（如果覺得晃動可以關閉）
-                        </small>
                     </div>
                 </div>
 
                 <div class="section">
-                    <h2 class="section-title">📖 逐字稿內容</h2>
-                    <div class="transcript-container" id="transcriptDisplay"></div>
-                </div>
-                
-                <!-- 比對視覺化區 -->
-                <div id="comparisonSection" style="display: none; margin-top: 20px;">
-                    <h3 style="color: #667eea; margin-bottom: 15px;">📊 發音比對</h3>
-                    <div style="background: white; padding: 20px; border-radius: 12px;">
-                        <div style="margin-bottom: 20px;">
-                            <h4 style="color: #4a5568; margin-bottom: 10px;">原音波形</h4>
-                            <canvas id="originalWaveform" width="800" height="100" style="width: 100%; border: 1px solid #e2e8f0; border-radius: 4px;"></canvas>
-                        </div>
-                        <div>
-                            <h4 style="color: #4a5568; margin-bottom: 10px;">你的錄音波形</h4>
-                            <canvas id="recordingWaveform" width="800" height="100" style="width: 100%; border: 1px solid #e2e8f0; border-radius: 4px;"></canvas>
-                        </div>
+                    <h2 class="section-title">📝 逐字稿（每句一行）</h2>
+                    <div class="input-group">
+                        <textarea id="transcript" placeholder="每一句請分一行，例如：
+
+こんにちは、皆さん。
+今日はいい天気ですね。
+一緒に勉強しましょう。"></textarea>
                     </div>
                 </div>
+
+                <button onclick="startPractice()" style="width: 100%; font-size: 1.3em; padding: 20px;">
+                    🚀 開始練習
+                </button>
+            </div>
+
+            <!-- 練習區 -->
+            <div id="practiceArea" class="practice-area">
+                <div class="progress-info" id="progressInfo">
+                    第 1 / 10 句
+                </div>
+
+                <div class="status-box" id="statusBox">
+                    準備中...
+                </div>
+
+                <div class="sentence-display" id="sentenceDisplay">
+                    <div class="sentence-item current">
+                        載入中...
+                    </div>
+                </div>
+
+                <!-- 波形顯示 -->
+                <div id="waveformSection" style="display: none;">
+                    <div class="waveform-container">
+                        <h3 style="color: #4a5568; margin-bottom: 10px;">📊 原音波形</h3>
+                        <canvas id="originalWaveform" width="800" height="100"></canvas>
+                    </div>
+                    <div class="waveform-container">
+                        <h3 style="color: #4a5568; margin-bottom: 10px;">🎤 你的錄音波形</h3>
+                        <canvas id="recordingWaveform" width="800" height="100"></canvas>
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn-next" onclick="nextSentence()">
+                            ✅ 下一句
+                        </button>
+                        <button class="btn-retry" onclick="retrySentence()">
+                            🔄 再練一次
+                        </button>
+                        <button class="btn-skip" onclick="skipSentence()">
+                            ⏭️ 跳過
+                        </button>
+                    </div>
+                </div>
+
+                <audio id="audioPlayer"></audio>
             </div>
         </div>
     </div>
 
     <script>
-        let audio = document.getElementById('audioPlayer');
-        let currentLoopMode = 'none';
+        let sentences = [];
+        let currentIndex = 0;
+        let audioBlob = null;
         let mediaRecorder = null;
         let recordedChunks = [];
         let recordedBlob = null;
-        let isRecording = false;
-        let karaokeEnabled = false;
-        let transcriptWords = [];
-        let karaokeInterval = null;
 
-        // API Key 管理
-        function saveApiKey(provider) {
-            const keyInput = provider === 'openai' ? 
-                document.getElementById('openaiKey') : 
-                document.getElementById('assemblyaiKey');
-            const key = keyInput.value.trim();
-            
-            if (!key) {
-                alert('請輸入 API Key！');
+        // 開始練習
+        function startPractice() {
+            const audioFile = document.getElementById('audioFile').files[0];
+            const transcript = document.getElementById('transcript').value.trim();
+
+            if (!audioFile) {
+                alert('請上傳音訊檔案！');
                 return;
             }
 
-            // 儲存到 localStorage（只存在用戶瀏覽器）
-            localStorage.setItem(`${provider}_api_key`, key);
-            
-            const statusDiv = document.getElementById(`${provider}KeyStatus`);
-            showStatus(statusDiv, 'success', `✅ API Key 已安全儲存到你的瀏覽器本地！`);
-            
-            // 清空輸入框（安全考量）
-            keyInput.value = '';
-        }
-
-        function loadApiKey(provider) {
-            const key = localStorage.getItem(`${provider}_api_key`);
-            const statusDiv = document.getElementById(`${provider}KeyStatus`);
-            
-            if (key) {
-                const keyInput = provider === 'openai' ? 
-                    document.getElementById('openaiKey') : 
-                    document.getElementById('assemblyaiKey');
-                keyInput.value = key;
-                showStatus(statusDiv, 'success', '✅ 已載入已儲存的 API Key');
-            } else {
-                showStatus(statusDiv, 'error', '❌ 沒有找到已儲存的 API Key');
-            }
-        }
-
-        function clearApiKey(provider) {
-            if (confirm('確定要清除已儲存的 API Key 嗎？')) {
-                localStorage.removeItem(`${provider}_api_key`);
-                const keyInput = provider === 'openai' ? 
-                    document.getElementById('openaiKey') : 
-                    document.getElementById('assemblyaiKey');
-                keyInput.value = '';
-                
-                const statusDiv = document.getElementById(`${provider}KeyStatus`);
-                showStatus(statusDiv, 'info', '🗑️ API Key 已清除');
-            }
-        }
-
-        // 切換 API 分頁
-        function switchApiTab(tabName) {
-            document.querySelectorAll('#openai-api-tab, #assemblyai-api-tab').forEach(content => {
-                content.classList.remove('active');
-            });
-            document.getElementById(tabName + '-api-tab').classList.add('active');
-        }
-
-        // 切換音訊來源分頁
-        function switchAudioTab(e, tabName) {
-            // 移除所有分頁按鈕的 active
-            const audioTabs = document.querySelectorAll('.tab-container .tab');
-            audioTabs.forEach(tab => {
-                // 只移除音訊區的分頁
-                if (tab.onclick && tab.onclick.toString().includes('switchAudioTab')) {
-                    tab.classList.remove('active');
-                }
-            });
-            e.target.classList.add('active');
-
-            // 切換內容區
-            document.querySelectorAll('#url-audio-tab, #youtube-audio-tab, #upload-audio-tab').forEach(content => {
-                content.classList.remove('active');
-            });
-            document.getElementById(tabName + '-audio-tab').classList.add('active');
-        }
-
-        // 切換逐字稿分頁
-        function switchTab(e, tabName) {
-            // 移除所有逐字稿分頁按鈕的 active
-            const transcriptTabs = e.target.parentElement.querySelectorAll('.tab');
-            transcriptTabs.forEach(tab => {
-                tab.classList.remove('active');
-            });
-            e.target.classList.add('active');
-
-            // 切換內容區
-            document.querySelectorAll('#manual-tab, #auto-tab, #youtube-tab').forEach(content => {
-                content.classList.remove('active');
-            });
-            document.getElementById(tabName + '-tab').classList.add('active');
-        }
-
-        // 從網址載入音訊
-        function loadFromUrl() {
-            const audioUrl = document.getElementById('audioUrl').value.trim();
-            const statusDiv = document.getElementById('urlStatus');
-
-            if (!audioUrl) {
-                showStatus(statusDiv, 'error', '❌ 請輸入音訊網址');
+            if (!transcript) {
+                alert('請輸入逐字稿！');
                 return;
             }
+
+            // 分割句子
+            sentences = transcript.split('\n').filter(s => s.trim());
+            if (sentences.length === 0) {
+                alert('逐字稿格式錯誤，請每句分一行！');
+                return;
+            }
+
+            // 載入音訊
+            const audio = document.getElementById('audioPlayer');
+            audio.src = URL.createObjectURL(audioFile);
+            audioBlob = audioFile;
+
+            // 切換到練習區
+            document.getElementById('setupArea').style.display = 'none';
+            document.getElementById('practiceArea').classList.add('active');
+
+            // 開始第一句
+            currentIndex = 0;
+            startSentencePractice();
+        }
+
+        // 開始練習一句
+        async function startSentencePractice() {
+            updateProgress();
+            displayCurrentSentence();
+            hideWaveforms();
+
+            // 流程：播放 → 播放 → 錄音
+            await playSentenceTwice();
+            await recordSentence();
+            await showComparison();
+        }
+
+        // 更新進度
+        function updateProgress() {
+            const progress = document.getElementById('progressInfo');
+            progress.textContent = `第 ${currentIndex + 1} / ${sentences.length} 句`;
+        }
+
+        // 顯示當前句子
+        function displayCurrentSentence() {
+            const display = document.getElementById('sentenceDisplay');
+            display.innerHTML = `<div class="sentence-item current">${sentences[currentIndex]}</div>`;
+        }
+
+        // 播放兩次
+        async function playSentenceTwice() {
+            const statusBox = document.getElementById('statusBox');
+            statusBox.className = 'status-box listening';
+            
+            // 第一次
+            statusBox.innerHTML = '<h2>🎵 第 1 次播放</h2><p>請仔細聆聽</p>';
+            await playAudio();
+            await sleep(500);
+
+            // 第二次
+            statusBox.innerHTML = '<h2>🎵 第 2 次播放</h2><p>準備跟讀</p>';
+            await playAudio();
+            await sleep(500);
+        }
+
+        // 播放音訊
+        function playAudio() {
+            return new Promise((resolve) => {
+                const audio = document.getElementById('audioPlayer');
+                audio.currentTime = 0;
+                audio.play();
+                audio.onended = resolve;
+            });
+        }
+
+        // 錄音
+        async function recordSentence() {
+            const statusBox = document.getElementById('statusBox');
+            statusBox.className = 'status-box recording';
+            statusBox.innerHTML = '<h2>🎤 錄音中...</h2><p>請開始朗讀</p>';
 
             try {
-                audio.src = audioUrl;
-                showStatus(statusDiv, 'success', '✅ 音訊已載入！現在可以設定逐字稿並開始練習');
-            } catch (error) {
-                showStatus(statusDiv, 'error', '❌ 載入失敗：' + error.message);
-            }
-        }
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                recordedChunks = [];
 
-        // 從 YouTube 載入（提示用戶使用工具）
-        function loadFromYouTube() {
-            const youtubeUrl = document.getElementById('youtubeVideoUrl').value.trim();
-            const statusDiv = document.getElementById('youtubeAudioStatus');
-
-            if (!youtubeUrl) {
-                showStatus(statusDiv, 'error', '❌ 請輸入 YouTube 影片網址');
-                return;
-            }
-
-            if (!youtubeUrl.includes('youtube.com') && !youtubeUrl.includes('youtu.be')) {
-                showStatus(statusDiv, 'error', '❌ 請輸入有效的 YouTube 網址');
-                return;
-            }
-
-            showStatus(statusDiv, 'info', 
-                '💡 由於瀏覽器限制，請使用以下方式：<br>' +
-                '1. 使用 <a href="https://yt1s.com/" target="_blank" style="color: #667eea;">yt1s.com</a> 下載音訊<br>' +
-                '2. 在「上傳檔案」分頁上傳音訊<br>' +
-                '3. 在「逐字稿」→「YouTube 字幕」提取字幕'
-            );
-        }
-
-        // 處理 YouTube 字幕
-        function processYouTubeTranscript() {
-            const transcriptText = document.getElementById('youtubeTranscriptText').value.trim();
-            const statusDiv = document.getElementById('youtubeTranscriptStatus');
-
-            if (!transcriptText) {
-                showStatus(statusDiv, 'error', '❌ 請貼上 YouTube 字幕內容');
-                return;
-            }
-
-            // 清理 YouTube 字幕格式（移除時間戳記）
-            let cleaned = transcriptText
-                // 移除時間戳 (例如: 0:00, 1:23)
-                .replace(/\d+:\d+/g, '')
-                // 移除多餘空白
-                .replace(/\s+/g, ' ')
-                // 按句號分段
-                .split(/[.!?]+/)
-                .map(s => s.trim())
-                .filter(s => s.length > 0)
-                .join('\n');
-
-            // 放到主要逐字稿區
-            document.getElementById('transcript').value = cleaned;
-            
-            showStatus(statusDiv, 'success', '✅ 字幕已處理並載入！可以開始練習了');
-            
-            // 切換到手動輸入分頁顯示結果
-            setTimeout(() => {
-                switchToManualTab();
-            }, 500);
-        }
-
-        // 切換到手動輸入分頁（程式化）
-        function switchToManualTab() {
-            // 移除所有逐字稿分頁的 active
-            document.querySelectorAll('#manual-tab, #auto-tab, #youtube-tab').forEach(content => {
-                content.classList.remove('active');
-            });
-            document.getElementById('manual-tab').classList.add('active');
-            
-            // 更新按鈕狀態
-            const tabContainer = document.querySelector('.tab-container');
-            const tabs = Array.from(tabContainer.querySelectorAll('.tab'));
-            tabs.forEach(tab => {
-                if (tab.onclick && tab.onclick.toString().includes('manual')) {
-                    tab.classList.add('active');
-                } else if (tab.onclick && (tab.onclick.toString().includes('auto') || tab.onclick.toString().includes('youtube'))) {
-                    tab.classList.remove('active');
-                }
-            });
-        }
-
-        // 載入音訊
-        function loadAudio() {
-            const audioUrl = document.getElementById('audioUrl').value.trim();
-            const audioFile = document.getElementById('audioFile').files[0];
-            const transcriptText = document.getElementById('transcript').value.trim();
-
-            if (!transcriptText) {
-                alert('請輸入或產生逐字稿內容！');
-                return;
-            }
-
-            if (audioUrl) {
-                audio.src = audioUrl;
-            } else if (audioFile) {
-                audio.src = URL.createObjectURL(audioFile);
-            } else {
-                alert('請提供音訊網址或上傳音訊檔案！');
-                return;
-            }
-
-            document.getElementById('playerContainer').classList.add('active');
-            displayTranscript(transcriptText);
-            document.getElementById('playerContainer').scrollIntoView({ behavior: 'smooth' });
-            
-            // 如果沒有時間戳記，顯示提示
-            if (!window.transcriptTimestamps) {
-                console.log('提示：使用 Whisper API 自動產生逐字稿可獲得精確的卡拉OK同步效果');
-            }
-        }
-
-        // 顯示逐字稿
-        function displayTranscript(text) {
-            const container = document.getElementById('transcriptDisplay');
-            
-            // 如果有時間戳記資料，使用精確模式
-            if (window.transcriptTimestamps && window.transcriptTimestamps.length > 0) {
-                const wordsHtml = window.transcriptTimestamps.map((wordData, index) => {
-                    return `<span class="transcript-word" 
-                                  data-index="${index}" 
-                                  data-start="${wordData.start}" 
-                                  data-end="${wordData.end}">${wordData.word}</span>`;
-                }).join(' ');
-                container.innerHTML = `<p>${wordsHtml}</p>`;
-            } else {
-                // 沒有時間戳記，使用基本模式
-                const paragraphs = text.split('\n').filter(p => p.trim());
-                const wordsHtml = paragraphs.map((p, pIndex) => {
-                    const words = p.split(/(\s+)/).filter(w => w.trim());
-                    const wordSpans = words.map((word, wIndex) => {
-                        return `<span class="transcript-word" data-index="${pIndex}-${wIndex}">${word}</span>`;
-                    }).join(' ');
-                    return `<p>${wordSpans}</p>`;
-                }).join('');
-                container.innerHTML = wordsHtml;
-            }
-            
-            // 儲存單詞元素供卡拉OK使用
-            transcriptWords = Array.from(container.querySelectorAll('.transcript-word'));
-        }
-
-        // 播放/暫停控制
-        function togglePlay() {
-            const btn = document.getElementById('playBtn');
-            if (audio.paused) {
-                audio.play();
-                btn.textContent = '⏸️ 暫停';
-            } else {
-                audio.pause();
-                btn.textContent = '▶️ 播放';
-            }
-        }
-
-        // 進度條控制
-        function seekAudio(value) {
-            const time = (value / 100) * audio.duration;
-            audio.currentTime = time;
-        }
-
-        // 更新進度條和時間顯示
-        audio.addEventListener('timeupdate', function() {
-            const progress = (audio.currentTime / audio.duration) * 100;
-            document.getElementById('progressBar').value = progress || 0;
-            
-            document.getElementById('currentTime').textContent = formatTime(audio.currentTime);
-            document.getElementById('duration').textContent = formatTime(audio.duration);
-            
-            // 卡拉OK效果
-            if (karaokeEnabled) {
-                updateKaraoke();
-            }
-            
-            // 循環播放邏輯
-            if (currentLoopMode !== 'none' && currentLoopMode !== 'custom') {
-                const interval = parseInt(currentLoopMode);
-                const currentTime = audio.currentTime;
-                const segmentStart = Math.floor(currentTime / interval) * interval;
-                const segmentEnd = segmentStart + interval;
-                if (currentTime >= segmentEnd) {
-                    audio.currentTime = segmentStart;
-                }
-            } else if (currentLoopMode === 'custom') {
-                const start = parseFloat(document.getElementById('loopStart').value) || 0;
-                const end = parseFloat(document.getElementById('loopEnd').value) || 10;
-                if (audio.currentTime >= end) {
-                    audio.currentTime = start;
-                }
-            }
-        });
-
-        // 音訊播放結束
-        audio.addEventListener('ended', function() {
-            document.getElementById('playBtn').textContent = '▶️ 播放';
-        });
-
-        // 音訊載入完成
-        audio.addEventListener('loadedmetadata', function() {
-            document.getElementById('duration').textContent = formatTime(audio.duration);
-        });
-
-        // 格式化時間
-        function formatTime(seconds) {
-            if (isNaN(seconds)) return '0:00';
-            const mins = Math.floor(seconds / 60);
-            const secs = Math.floor(seconds % 60);
-            return `${mins}:${secs.toString().padStart(2, '0')}`;
-        }
-
-        // 卡拉OK模式
-        function toggleKaraokeMode() {
-            karaokeEnabled = document.getElementById('karaokeMode').checked;
-            const hint = document.getElementById('karaokeHint');
-            
-            if (!karaokeEnabled) {
-                // 移除所有高亮
-                transcriptWords.forEach(word => {
-                    word.classList.remove('karaoke-active');
-                    word.style.opacity = '1';
-                });
-            } else {
-                // 更新提示
-                if (window.transcriptTimestamps) {
-                    hint.textContent = '✅ 已啟用精確同步模式';
-                    hint.style.color = '#10b981';
-                } else {
-                    hint.textContent = '⚠️ 使用簡單模式（建議用 Whisper API 產生逐字稿獲得精確同步）';
-                    hint.style.color = '#f59e0b';
-                }
-            }
-        }
-
-        function updateKaraoke() {
-            if (!karaokeEnabled || transcriptWords.length === 0) return;
-            
-            const currentTime = audio.currentTime;
-            let currentActiveWord = null;
-            
-            // 如果有精確的時間戳記，使用它們
-            if (window.transcriptTimestamps && window.transcriptTimestamps.length > 0) {
-                transcriptWords.forEach((wordElement, index) => {
-                    const start = parseFloat(wordElement.dataset.start);
-                    const end = parseFloat(wordElement.dataset.end);
-                    
-                    if (currentTime >= start && currentTime <= end) {
-                        // 當前正在說的單詞
-                        if (!wordElement.classList.contains('karaoke-active')) {
-                            wordElement.classList.add('karaoke-active');
-                            currentActiveWord = wordElement;
-                        }
-                        wordElement.style.opacity = '1';
-                    } else if (currentTime > end) {
-                        // 已經說過的單詞
-                        wordElement.classList.remove('karaoke-active');
-                        wordElement.style.opacity = '0.5';
-                    } else {
-                        // 還沒說到的單詞
-                        wordElement.classList.remove('karaoke-active');
-                        wordElement.style.opacity = '1';
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) {
+                        recordedChunks.push(e.data);
                     }
-                });
-            } else {
-                // 沒有時間戳記，使用簡單的比例計算
-                const duration = audio.duration;
-                const progress = currentTime / duration;
-                const activeIndex = Math.floor(progress * transcriptWords.length);
-                
-                transcriptWords.forEach((word, index) => {
-                    if (index === activeIndex) {
-                        if (!word.classList.contains('karaoke-active')) {
-                            word.classList.add('karaoke-active');
-                            currentActiveWord = word;
-                        }
-                    } else if (index < activeIndex) {
-                        word.classList.remove('karaoke-active');
-                        word.style.opacity = '0.6';
-                    } else {
-                        word.classList.remove('karaoke-active');
-                        word.style.opacity = '1';
-                    }
-                });
-            }
-            
-            // 只在切換到新單詞時才滾動，減少晃動
-            if (currentActiveWord && currentActiveWord !== window.lastActiveWord) {
-                // 檢查是否啟用自動滾動
-                const autoScrollEnabled = document.getElementById('autoScrollMode').checked;
-                
-                if (autoScrollEnabled) {
-                    // 使用更溫和的滾動方式
-                    const rect = currentActiveWord.getBoundingClientRect();
-                    const container = document.getElementById('transcriptDisplay');
-                    const containerRect = container.getBoundingClientRect();
-                    
-                    // 只有當單詞接近容器邊緣時才滾動
-                    if (rect.top < containerRect.top + 50 || rect.bottom > containerRect.bottom - 50) {
-                        currentActiveWord.scrollIntoView({ 
-                            behavior: 'smooth', 
-                            block: 'center',
-                            inline: 'nearest'
-                        });
-                    }
-                }
-                
-                window.lastActiveWord = currentActiveWord;
-            }
-        }
+                };
 
-        // 錄音功能
-        async function toggleRecord() {
-            const btn = document.getElementById('recordBtn');
-            const statusDiv = document.getElementById('recordingStatus');
-            
-            if (!isRecording) {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    mediaRecorder = new MediaRecorder(stream);
-                    recordedChunks = [];
-                    
-                    mediaRecorder.ondataavailable = (e) => {
-                        if (e.data.size > 0) {
-                            recordedChunks.push(e.data);
-                        }
-                    };
-                    
+                return new Promise((resolve) => {
                     mediaRecorder.onstop = () => {
                         recordedBlob = new Blob(recordedChunks, { type: 'audio/webm' });
-                        document.getElementById('playRecordBtn').style.display = 'inline-block';
-                        document.getElementById('compareBtn').style.display = 'inline-block';
-                        showStatus(statusDiv, 'success', '✅ 錄音完成！可以播放或比對');
+                        stream.getTracks().forEach(track => track.stop());
+                        resolve();
                     };
-                    
+
                     mediaRecorder.start();
-                    isRecording = true;
-                    btn.textContent = '⏹️ 停止錄音';
-                    btn.style.background = '#f59e0b';
-                    
-                    // 詢問是否同步播放原音
-                    const playOriginal = confirm('要同時播放原音嗎？\n\n點「確定」= 同時播放原音（適合跟讀）\n點「取消」= 只錄音不播放（適合背誦）');
-                    
-                    if (playOriginal) {
-                        audio.currentTime = 0;
-                        audio.play();
-                        document.getElementById('playBtn').textContent = '⏸️ 暫停';
-                        showStatus(statusDiv, 'info', '🎤 錄音中... 原音同步播放');
-                    } else {
-                        showStatus(statusDiv, 'info', '🎤 錄音中... 請開始朗讀');
-                    }
-                    
-                } catch (error) {
-                    showStatus(statusDiv, 'error', '❌ 無法存取麥克風：' + error.message);
-                }
-            } else {
-                mediaRecorder.stop();
-                mediaRecorder.stream.getTracks().forEach(track => track.stop());
-                isRecording = false;
-                btn.textContent = '🎤 開始錄音';
-                btn.style.background = '#e53e3e';
-                
-                // 停止原音播放（如果正在播放）
-                if (!audio.paused) {
-                    audio.pause();
-                    document.getElementById('playBtn').textContent = '▶️ 播放';
-                }
+
+                    // 錄音時間 = 音訊時長
+                    const audio = document.getElementById('audioPlayer');
+                    setTimeout(() => {
+                        if (mediaRecorder.state === 'recording') {
+                            mediaRecorder.stop();
+                        }
+                    }, audio.duration * 1000);
+                });
+            } catch (error) {
+                alert('無法存取麥克風：' + error.message);
             }
         }
 
-        // 播放錄音
-        function playRecording() {
-            if (recordedBlob) {
-                const audioUrl = URL.createObjectURL(recordedBlob);
-                const recordAudio = new Audio(audioUrl);
-                recordAudio.play();
-            }
-        }
+        // 顯示比對結果
+        async function showComparison() {
+            const statusBox = document.getElementById('statusBox');
+            statusBox.className = 'status-box completed';
+            statusBox.innerHTML = '<h2>✅ 完成！</h2><p>查看波形比對</p>';
 
-        // 比對音訊
-        async function compareAudio() {
-            if (!recordedBlob) return;
-            
-            document.getElementById('comparisonSection').style.display = 'block';
-            
+            // 顯示波形
+            document.getElementById('waveformSection').style.display = 'block';
+
             // 繪製波形
+            const audio = document.getElementById('audioPlayer');
             await drawWaveform(audio.src, 'originalWaveform', '#667eea');
-            await drawWaveform(URL.createObjectURL(recordedBlob), 'recordingWaveform', '#e53e3e');
-            
-            // 滾動到比對區
-            document.getElementById('comparisonSection').scrollIntoView({ behavior: 'smooth' });
+            await drawWaveform(URL.createObjectURL(recordedBlob), 'recordingWaveform', '#ef4444');
         }
 
         // 繪製波形
@@ -1211,253 +466,87 @@
             const ctx = canvas.getContext('2d');
             const width = canvas.width;
             const height = canvas.height;
-            
-            // 清空畫布
+
             ctx.clearRect(0, 0, width, height);
-            
+
             try {
-                // 載入音訊
                 const response = await fetch(audioSrc);
                 const arrayBuffer = await response.arrayBuffer();
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-                
+
                 const data = audioBuffer.getChannelData(0);
                 const step = Math.ceil(data.length / width);
                 const amp = height / 2;
-                
+
                 ctx.fillStyle = color;
-                ctx.beginPath();
-                
+
                 for (let i = 0; i < width; i++) {
                     let min = 1.0;
                     let max = -1.0;
-                    
+
                     for (let j = 0; j < step; j++) {
                         const datum = data[(i * step) + j];
                         if (datum < min) min = datum;
                         if (datum > max) max = datum;
                     }
-                    
+
                     const yMin = (1 + min) * amp;
                     const yMax = (1 + max) * amp;
-                    
+
                     ctx.fillRect(i, yMin, 1, yMax - yMin);
                 }
-                
             } catch (error) {
                 console.error('繪製波形失敗:', error);
-                ctx.fillStyle = '#cbd5e0';
-                ctx.fillRect(0, height / 2 - 2, width, 4);
-                ctx.fillStyle = '#4a5568';
-                ctx.font = '14px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('無法載入波形', width / 2, height / 2 + 20);
             }
         }
 
-        // 使用 Whisper API 產生逐字稿
-        async function generateWithWhisper() {
-            // 從 localStorage 讀取 API Key
-            const apiKey = localStorage.getItem('openai_api_key');
-            const audioFile = document.getElementById('audioFile').files[0];
-            const language = document.getElementById('audioLanguage').value;
-            const statusDiv = document.getElementById('autoStatus');
-
-            if (!apiKey) {
-                showStatus(statusDiv, 'error', '❌ 請先在上方設定並儲存 OpenAI API Key');
-                return;
-            }
-
-            if (!audioFile) {
-                showStatus(statusDiv, 'error', '❌ 請先上傳音訊檔案');
-                return;
-            }
-
-            const btn = document.getElementById('whisperBtn');
-            btn.disabled = true;
-            btn.textContent = '⏳ 處理中...';
-            
-            const langText = language ? getLanguageName(language) : '自動偵測';
-            showStatus(statusDiv, 'info', `正在使用 ${langText} 轉錄音訊並生成時間戳，這可能需要幾分鐘...`);
-
-            try {
-                const formData = new FormData();
-                formData.append('file', audioFile);
-                formData.append('model', 'whisper-1');
-                formData.append('response_format', 'verbose_json');
-                formData.append('timestamp_granularities[]', 'word');
-                
-                // 只有在指定語言時才加入 language 參數
-                // 不指定時 Whisper 會自動偵測
-                if (language) {
-                    formData.append('language', language);
-                }
-
-                const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`
-                    },
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error?.message || '轉錄失敗');
-                }
-
-                const result = await response.json();
-                
-                // 儲存時間戳記資料
-                if (result.words) {
-                    window.transcriptTimestamps = result.words;
-                    console.log('已獲取單詞時間戳:', result.words);
-                    showStatus(statusDiv, 'success', '✅ 逐字稿和時間戳產生成功！卡拉OK模式現在會精確同步');
-                } else {
-                    window.transcriptTimestamps = null;
-                    showStatus(statusDiv, 'success', '✅ 逐字稿產生成功！（未包含時間戳）');
-                }
-                
-                document.getElementById('transcript').value = result.text;
-                
-                // 自動切換到手動輸入分頁
-                switchToManualTab();
-
-            } catch (error) {
-                showStatus(statusDiv, 'error', '❌ 錯誤: ' + error.message);
-            } finally {
-                btn.disabled = false;
-                btn.textContent = '🤖 使用 Whisper 產生逐字稿';
-            }
-        }
-
-        // 顯示狀態訊息
-        function showStatus(container, type, message) {
-            container.innerHTML = `<div class="status-message ${type}">${message}</div>`;
-        }
-
-        // 取得語言名稱
-        function getLanguageName(code) {
-            const languages = {
-                'en': '英文',
-                'zh': '中文',
-                'ja': '日文',
-                'ko': '韓文',
-                'es': '西班牙文',
-                'fr': '法文',
-                'de': '德文',
-                'it': '義大利文',
-                'pt': '葡萄牙文',
-                'ru': '俄文',
-                'ar': '阿拉伯文',
-                'hi': '印地文',
-                'th': '泰文',
-                'vi': '越南文'
-            };
-            return languages[code] || code;
-        }
-
-        // 速度控制
-        document.getElementById('speedControl').addEventListener('input', function() {
-            const speed = parseFloat(this.value);
-            audio.playbackRate = speed;
-            document.getElementById('speedDisplay').textContent = speed.toFixed(1) + 'x';
-        });
-
-        // 更新循環設定
-        function updateLoopTimes() {
-            const loopSelect = document.getElementById('loopSelect');
-            const value = loopSelect.value;
-            currentLoopMode = value;
-
-            const customGroup = document.getElementById('customLoopGroup');
-            const customEndGroup = document.getElementById('customLoopEndGroup');
-
-            if (value === 'custom') {
-                customGroup.style.display = 'block';
-                customEndGroup.style.display = 'block';
+        // 下一句
+        function nextSentence() {
+            currentIndex++;
+            if (currentIndex >= sentences.length) {
+                showComplete();
             } else {
-                customGroup.style.display = 'none';
-                customEndGroup.style.display = 'none';
+                startSentencePractice();
             }
         }
 
-        // 音訊時間更新事件
-        audio.addEventListener('timeupdate', function() {
-            if (currentLoopMode !== 'none' && currentLoopMode !== 'custom') {
-                const interval = parseInt(currentLoopMode);
-                const currentTime = audio.currentTime;
-                
-                const segmentStart = Math.floor(currentTime / interval) * interval;
-                const segmentEnd = segmentStart + interval;
-
-                if (currentTime >= segmentEnd) {
-                    audio.currentTime = segmentStart;
-                }
-            } else if (currentLoopMode === 'custom') {
-                const start = parseFloat(document.getElementById('loopStart').value) || 0;
-                const end = parseFloat(document.getElementById('loopEnd').value) || 10;
-                
-                if (audio.currentTime >= end) {
-                    audio.currentTime = start;
-                }
-            }
-        });
-
-        // 重新設定
-        function resetAll() {
-            document.getElementById('audioUrl').value = '';
-            document.getElementById('audioFile').value = '';
-            document.getElementById('transcript').value = '';
-            document.getElementById('playerContainer').classList.remove('active');
-            audio.pause();
-            audio.src = '';
-            document.getElementById('speedControl').value = 1;
-            document.getElementById('speedDisplay').textContent = '1.0x';
-            document.getElementById('loopSelect').value = 'none';
-            currentLoopMode = 'none';
-            updateLoopTimes();
-            document.getElementById('autoStatus').innerHTML = '';
+        // 再練一次
+        function retrySentence() {
+            startSentencePractice();
         }
 
-        // 鍵盤快捷鍵
-        document.addEventListener('keydown', function(e) {
-            if (e.code === 'Space' && audio.src) {
-                e.preventDefault();
-                if (audio.paused) {
-                    audio.play();
-                } else {
-                    audio.pause();
-                }
-            }
-            
-            if (e.code === 'ArrowLeft' && audio.src) {
-                e.preventDefault();
-                audio.currentTime = Math.max(0, audio.currentTime - 5);
-            }
-            
-            if (e.code === 'ArrowRight' && audio.src) {
-                e.preventDefault();
-                audio.currentTime = Math.min(audio.duration, audio.currentTime + 5);
-            }
-        });
+        // 跳過
+        function skipSentence() {
+            nextSentence();
+        }
 
-        // 頁面載入時檢查是否有儲存的 API Key
-        window.addEventListener('load', function() {
-            const openaiKey = localStorage.getItem('openai_api_key');
-            const assemblyaiKey = localStorage.getItem('assemblyai_api_key');
-            
-            if (openaiKey) {
-                showStatus(document.getElementById('openaiKeyStatus'), 'success', 
-                    '✅ 已有儲存的 OpenAI API Key');
-            }
-            
-            if (assemblyaiKey) {
-                showStatus(document.getElementById('assemblyaiKeyStatus'), 'success', 
-                    '✅ 已有儲存的 AssemblyAI API Key');
-            }
-        });
+        // 完成所有練習
+        function showComplete() {
+            const practiceArea = document.getElementById('practiceArea');
+            practiceArea.innerHTML = `
+                <div style="text-align: center; padding: 50px;">
+                    <h1 style="color: #10b981; font-size: 3em;">🎉</h1>
+                    <h2 style="color: #667eea; margin: 20px 0;">恭喜完成！</h2>
+                    <p style="color: #4a5568; font-size: 1.2em; margin-bottom: 30px;">
+                        你已經完成了 ${sentences.length} 句練習
+                    </p>
+                    <button onclick="location.reload()" style="font-size: 1.2em; padding: 15px 40px;">
+                        🔄 再練一次
+                    </button>
+                </div>
+            `;
+        }
+
+        // 隱藏波形
+        function hideWaveforms() {
+            document.getElementById('waveformSection').style.display = 'none';
+        }
+
+        // 延遲函數
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
     </script>
 </body>
 </html>
