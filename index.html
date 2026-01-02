@@ -127,7 +127,8 @@
             padding: 30px;
             border-radius: 12px;
             margin-bottom: 30px;
-            min-height: 150px;
+            max-height: 400px;
+            overflow-y: auto;
         }
 
         .sentence-item {
@@ -145,6 +146,14 @@
         .sentence-item.completed {
             background: #d1fae5;
             border-left: 4px solid #10b981;
+            opacity: 0.7;
+        }
+
+        .sentence-item.completed::before {
+            content: '✓ ';
+            color: #10b981;
+            font-weight: bold;
+            margin-right: 5px;
         }
 
         .sentence-item.current {
@@ -278,9 +287,7 @@
                 </div>
 
                 <div class="sentence-display" id="sentenceDisplay">
-                    <div class="sentence-item current">
-                        載入中...
-                    </div>
+                    <!-- 這裡會顯示所有句子 -->
                 </div>
 
                 <!-- 波形顯示 -->
@@ -377,7 +384,33 @@
         // 顯示當前句子
         function displayCurrentSentence() {
             const display = document.getElementById('sentenceDisplay');
-            display.innerHTML = `<div class="sentence-item current">${sentences[currentIndex]}</div>`;
+            
+            // 顯示所有句子，高亮當前句子
+            const html = sentences.map((sentence, index) => {
+                let className = 'sentence-item';
+                if (index < currentIndex) {
+                    className += ' completed';
+                } else if (index === currentIndex) {
+                    className += ' current';
+                }
+                
+                return `
+                    <div class="${className}">
+                        <span style="color: #9ca3af; margin-right: 10px;">${index + 1}.</span>
+                        ${sentence}
+                    </div>
+                `;
+            }).join('');
+            
+            display.innerHTML = html;
+            
+            // 自動滾動到當前句子
+            setTimeout(() => {
+                const currentElement = display.querySelector('.current');
+                if (currentElement) {
+                    currentElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 100);
         }
 
         // 播放兩次
