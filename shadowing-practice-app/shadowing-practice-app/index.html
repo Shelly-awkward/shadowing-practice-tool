@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shadowing 練習工具 Pro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 1.3em;
+            color: #667eea;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #4a5568;
+            font-weight: 500;
+        }
+
+        input[type="text"], input[type="file"], input[type="url"], input[type="password"], textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        input[type="text"]:focus, input[type="url"]:focus, input[type="password"]:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea {
+            min-height: 150px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        button.secondary {
+            background: #718096;
+        }
+
+        button.danger {
+            background: #e53e3e;
+        }
+
+        .player-container {
+            background: #f7fafc;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            display: none;
+        }
+
+        .player-container.active {
+            display: block;
+        }
+
+        audio {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .control-group label {
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .control-group input[type="range"] {
+            width: 100%;
+        }
+
+        .control-group select {
+            padding: 8px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 1em;
+        }
+
+        .speed-display {
+            font-weight: 600;
+            color: #667eea;
+            margin-top: 5px;
+            font-size: 0.95em;
+        }
+
+        .transcript-container {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            border: 2px solid #e2e8f0;
+            max-height: 400px;
+            overflow-y: auto;
+            line-height: 1.8;
+            font-size: 1.1em;
+        }
+
+        .transcript-container p {
+            margin-bottom: 15px;
+            color: #2d3748;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .info-box {
+            background: #ebf4ff;
+            border-left: 4px solid #4299e1;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .info-box p, .info-box ul {
+            color: #2c5282;
+            line-height: 1.6;
+        }
+
+        .warning-box {
+            background: #fef5e7;
+            border-left: 4px solid #f39c12;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .warning-box p {
+            color: #7d6608;
+            line-height: 1.6;
+        }
+
+        .security-box {
+            background: #f0fdf4;
+            border-left: 4px solid #10b981;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .security-box p, .security-box ul {
+            color: #065f46;
+            line-height: 1.6;
+        }
+
+        .status-message {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.95em;
+        }
+
+        .status-message.info {
+            background: #e6f7ff;
+            color: #0066cc;
+        }
+
+        .status-message.success {
+            background: #f0f9ff;
+            color: #047857;
+        }
+
+        .status-message.error {
+            background: #fff1f0;
+            color: #dc2626;
+        }
+
+        .tab-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            border-radius: 0;
+            color: #718096;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .tab:hover {
+            color: #667eea;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .tab.active {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .api-key-display {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .api-key-display small {
+            color: #10b981;
+            font-weight: 500;
+        }
+
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 1.5em;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .controls {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎧 Shadowing 練習工具 Pro</h1>
+            <p>跟讀練習，提升聽說能力</p>
+        </div>
+
+        <div class="content">
+            <div class="security-box">
+                <p><strong>🔒 隱私保護：</strong></p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li>你的 API Key 只會儲存在<strong>你的瀏覽器本地</strong>，不會上傳到任何伺服器</li>
+                    <li>即使此程式碼公開在 GitHub，你的 Key 仍然是安全的</li>
+                    <li>可隨時清除已儲存的 API Key</li>
+                </ul>
+            </div>
+
+            <!-- API Key 設定區 -->
+            <div class="section">
+                <h2 class="section-title">🔑 API 設定（僅需設定一次）</h2>
+                
+                <div class="tab-container">
+                    <button class="tab active" onclick="switchApiTab('openai')">OpenAI</button>
+                    <button class="tab" onclick="switchApiTab('assemblyai')">AssemblyAI</button>
+                </div>
+
+                <!-- OpenAI 設定 -->
+                <div id="openai-api-tab" class="tab-content active">
+                    <div class="input-group">
+                        <label>OpenAI API Key</label>
+                        <input type="password" id="openaiKey" placeholder="sk-...">
+                        <div class="button-group" style="margin-top: 10px;">
+                            <button onclick="saveApiKey('openai')">💾 儲存到本地</button>
+                            <button class="secondary" onclick="loadApiKey('openai')">📥 載入已儲存的 Key</button>
+                            <button class="danger" onclick="clearApiKey('openai')">🗑️ 清除</button>
+                        </div>
+                        <div id="openaiKeyStatus"></div>
+                    </div>
+                </div>
+
+                <!-- AssemblyAI 設定 -->
+                <div id="assemblyai-api-tab" class="tab-content">
+                    <div class="input-group">
+                        <label>AssemblyAI API Key</label>
+                        <input type="password" id="assemblyaiKey" placeholder="你的 AssemblyAI Key">
+                        <div class="button-group" style="margin-top: 10px;">
+                            <button onclick="saveApiKey('assemblyai')">💾 儲存到本地</button>
+                            <button class="secondary" onclick="loadApiKey('assemblyai')">📥 載入已儲存的 Key</button>
+                            <button class="danger" onclick="clearApiKey('assemblyai')">🗑️ 清除</button>
+                        </div>
+                        <div id="assemblyaiKeyStatus"></div>
+                    </div>
+                </div>
+
+                <div class="info-box" style="margin-top: 15px;">
+                    <p><strong>💡 如何取得 API Key？</strong></p>
+                    <ul style="margin-left: 20px; margin-top: 5px;">
+                        <li><strong>OpenAI</strong>: <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a> (約 $0.006/分鐘)</li>
+                        <li><strong>AssemblyAI</strong>: <a href="https://www.assemblyai.com/" target="_blank">assemblyai.com</a> (有免費額度)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2 class="section-title">📁 載入音訊</h2>
+                <div class="input-group">
+                    <label>音訊網址（例如：podcast 的 MP3 連結）</label>
+                    <input type="url" id="audioUrl" placeholder="https://example.com/audio.mp3">
+                </div>
+                <div class="input-group">
+                    <label>或上傳本地音訊檔案</label>
+                    <input type="file" id="audioFile" accept="audio/*">
+                </div>
+            </div>
+
+            <div class="section">
+                <h2 class="section-title">📝 逐字稿</h2>
+                
+                <div class="tab-container">
+                    <button class="tab active" onclick="switchTab('manual')">手動輸入</button>
+                    <button class="tab" onclick="switchTab('auto')">自動產生</button>
+                </div>
+
+                <!-- 手動輸入 -->
+                <div id="manual-tab" class="tab-content active">
+                    <div class="input-group">
+                        <label>貼上或輸入逐字稿內容（每段分行）</label>
+                        <textarea id="transcript" placeholder="輸入逐字稿內容...&#10;&#10;每一段落請分行&#10;這樣可以更容易跟著練習"></textarea>
+                    </div>
+                </div>
+
+                <!-- 自動產生 -->
+                <div id="auto-tab" class="tab-content">
+                    <div class="button-group">
+                        <button onclick="generateWithWhisper()" id="whisperBtn">
+                            🤖 使用 Whisper 產生逐字稿
+                        </button>
+                    </div>
+                    <div id="autoStatus"></div>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button onclick="loadAudio()">▶️ 開始練習</button>
+                <button onclick="resetAll()" class="secondary">🔄 重新設定</button>
+            </div>
+
+            <div class="player-container" id="playerContainer">
+                <audio id="audioPlayer" controls controlsList="nodownload">
+                    您的瀏覽器不支援音訊播放。
+                </audio>
+
+                <div class="controls">
+                    <div class="control-group">
+                        <label>播放速度</label>
+                        <input type="range" id="speedControl" min="0.5" max="2" step="0.1" value="1">
+                        <div class="speed-display" id="speedDisplay">1.0x</div>
+                    </div>
+
+                    <div class="control-group">
+                        <label>循環播放區間</label>
+                        <select id="loopSelect" onchange="updateLoopTimes()">
+                            <option value="none">關閉循環</option>
+                            <option value="5">每 5 秒循環</option>
+                            <option value="10">每 10 秒循環</option>
+                            <option value="15">每 15 秒循環</option>
+                            <option value="30">每 30 秒循環</option>
+                            <option value="custom">自訂區間</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group" id="customLoopGroup" style="display: none;">
+                        <label>自訂開始時間（秒）</label>
+                        <input type="number" id="loopStart" min="0" step="1" value="0">
+                    </div>
+
+                    <div class="control-group" id="customLoopEndGroup" style="display: none;">
+                        <label>自訂結束時間（秒）</label>
+                        <input type="number" id="loopEnd" min="0" step="1" value="10">
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2 class="section-title">📖 逐字稿內容</h2>
+                    <div class="transcript-container" id="transcriptDisplay"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let audio = document.getElementById('audioPlayer');
+        let currentLoopMode = 'none';
+
+        // API Key 管理
+        function saveApiKey(provider) {
+            const keyInput = provider === 'openai' ? 
+                document.getElementById('openaiKey') : 
+                document.getElementById('assemblyaiKey');
+            const key = keyInput.value.trim();
+            
+            if (!key) {
+                alert('請輸入 API Key！');
+                return;
+            }
+
+            // 儲存到 localStorage（只存在用戶瀏覽器）
+            localStorage.setItem(`${provider}_api_key`, key);
+            
+            const statusDiv = document.getElementById(`${provider}KeyStatus`);
+            showStatus(statusDiv, 'success', `✅ API Key 已安全儲存到你的瀏覽器本地！`);
+            
+            // 清空輸入框（安全考量）
+            keyInput.value = '';
+        }
+
+        function loadApiKey(provider) {
+            const key = localStorage.getItem(`${provider}_api_key`);
+            const statusDiv = document.getElementById(`${provider}KeyStatus`);
+            
+            if (key) {
+                const keyInput = provider === 'openai' ? 
+                    document.getElementById('openaiKey') : 
+                    document.getElementById('assemblyaiKey');
+                keyInput.value = key;
+                showStatus(statusDiv, 'success', '✅ 已載入已儲存的 API Key');
+            } else {
+                showStatus(statusDiv, 'error', '❌ 沒有找到已儲存的 API Key');
+            }
+        }
+
+        function clearApiKey(provider) {
+            if (confirm('確定要清除已儲存的 API Key 嗎？')) {
+                localStorage.removeItem(`${provider}_api_key`);
+                const keyInput = provider === 'openai' ? 
+                    document.getElementById('openaiKey') : 
+                    document.getElementById('assemblyaiKey');
+                keyInput.value = '';
+                
+                const statusDiv = document.getElementById(`${provider}KeyStatus`);
+                showStatus(statusDiv, 'info', '🗑️ API Key 已清除');
+            }
+        }
+
+        // 切換 API 分頁
+        function switchApiTab(tabName) {
+            document.querySelectorAll('#openai-api-tab, #assemblyai-api-tab').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabName + '-api-tab').classList.add('active');
+        }
+
+        // 切換逐字稿分頁
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabName + '-tab').classList.add('active');
+        }
+
+        // 載入音訊
+        function loadAudio() {
+            const audioUrl = document.getElementById('audioUrl').value.trim();
+            const audioFile = document.getElementById('audioFile').files[0];
+            const transcriptText = document.getElementById('transcript').value.trim();
+
+            if (!transcriptText) {
+                alert('請輸入或產生逐字稿內容！');
+                return;
+            }
+
+            if (audioUrl) {
+                audio.src = audioUrl;
+            } else if (audioFile) {
+                audio.src = URL.createObjectURL(audioFile);
+            } else {
+                alert('請提供音訊網址或上傳音訊檔案！');
+                return;
+            }
+
+            document.getElementById('playerContainer').classList.add('active');
+            displayTranscript(transcriptText);
+            document.getElementById('playerContainer').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // 顯示逐字稿
+        function displayTranscript(text) {
+            const container = document.getElementById('transcriptDisplay');
+            const paragraphs = text.split('\n').filter(p => p.trim());
+            container.innerHTML = paragraphs.map(p => `<p>${p}</p>`).join('');
+        }
+
+        // 使用 Whisper API 產生逐字稿
+        async function generateWithWhisper() {
+            // 從 localStorage 讀取 API Key
+            const apiKey = localStorage.getItem('openai_api_key');
+            const audioFile = document.getElementById('audioFile').files[0];
+            const statusDiv = document.getElementById('autoStatus');
+
+            if (!apiKey) {
+                showStatus(statusDiv, 'error', '❌ 請先在上方設定並儲存 OpenAI API Key');
+                return;
+            }
+
+            if (!audioFile) {
+                showStatus(statusDiv, 'error', '❌ 請先上傳音訊檔案');
+                return;
+            }
+
+            const btn = document.getElementById('whisperBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ 處理中...';
+            showStatus(statusDiv, 'info', '正在上傳並轉錄音訊，這可能需要幾分鐘...');
+
+            try {
+                const formData = new FormData();
+                formData.append('file', audioFile);
+                formData.append('model', 'whisper-1');
+                formData.append('language', 'en');
+
+                const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error?.message || '轉錄失敗');
+                }
+
+                const result = await response.json();
+                document.getElementById('transcript').value = result.text;
+                showStatus(statusDiv, 'success', '✅ 逐字稿產生成功！');
+                
+                // 自動切換到手動輸入分頁
+                document.querySelector('.tab').click();
+
+            } catch (error) {
+                showStatus(statusDiv, 'error', '❌ 錯誤: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🤖 使用 Whisper 產生逐字稿';
+            }
+        }
+
+        // 顯示狀態訊息
+        function showStatus(container, type, message) {
+            container.innerHTML = `<div class="status-message ${type}">${message}</div>`;
+        }
+
+        // 速度控制
+        document.getElementById('speedControl').addEventListener('input', function() {
+            const speed = parseFloat(this.value);
+            audio.playbackRate = speed;
+            document.getElementById('speedDisplay').textContent = speed.toFixed(1) + 'x';
+        });
+
+        // 更新循環設定
+        function updateLoopTimes() {
+            const loopSelect = document.getElementById('loopSelect');
+            const value = loopSelect.value;
+            currentLoopMode = value;
+
+            const customGroup = document.getElementById('customLoopGroup');
+            const customEndGroup = document.getElementById('customLoopEndGroup');
+
+            if (value === 'custom') {
+                customGroup.style.display = 'block';
+                customEndGroup.style.display = 'block';
+            } else {
+                customGroup.style.display = 'none';
+                customEndGroup.style.display = 'none';
+            }
+        }
+
+        // 音訊時間更新事件
+        audio.addEventListener('timeupdate', function() {
+            if (currentLoopMode !== 'none' && currentLoopMode !== 'custom') {
+                const interval = parseInt(currentLoopMode);
+                const currentTime = audio.currentTime;
+                
+                const segmentStart = Math.floor(currentTime / interval) * interval;
+                const segmentEnd = segmentStart + interval;
+
+                if (currentTime >= segmentEnd) {
+                    audio.currentTime = segmentStart;
+                }
+            } else if (currentLoopMode === 'custom') {
+                const start = parseFloat(document.getElementById('loopStart').value) || 0;
+                const end = parseFloat(document.getElementById('loopEnd').value) || 10;
+                
+                if (audio.currentTime >= end) {
+                    audio.currentTime = start;
+                }
+            }
+        });
+
+        // 重新設定
+        function resetAll() {
+            document.getElementById('audioUrl').value = '';
+            document.getElementById('audioFile').value = '';
+            document.getElementById('transcript').value = '';
+            document.getElementById('playerContainer').classList.remove('active');
+            audio.pause();
+            audio.src = '';
+            document.getElementById('speedControl').value = 1;
+            document.getElementById('speedDisplay').textContent = '1.0x';
+            document.getElementById('loopSelect').value = 'none';
+            currentLoopMode = 'none';
+            updateLoopTimes();
+            document.getElementById('autoStatus').innerHTML = '';
+        }
+
+        // 鍵盤快捷鍵
+        document.addEventListener('keydown', function(e) {
+            if (e.code === 'Space' && audio.src) {
+                e.preventDefault();
+                if (audio.paused) {
+                    audio.play();
+                } else {
+                    audio.pause();
+                }
+            }
+            
+            if (e.code === 'ArrowLeft' && audio.src) {
+                e.preventDefault();
+                audio.currentTime = Math.max(0, audio.currentTime - 5);
+            }
+            
+            if (e.code === 'ArrowRight' && audio.src) {
+                e.preventDefault();
+                audio.currentTime = Math.min(audio.duration, audio.currentTime + 5);
+            }
+        });
+
+        // 頁面載入時檢查是否有儲存的 API Key
+        window.addEventListener('load', function() {
+            const openaiKey = localStorage.getItem('openai_api_key');
+            const assemblyaiKey = localStorage.getItem('assemblyai_api_key');
+            
+            if (openaiKey) {
+                showStatus(document.getElementById('openaiKeyStatus'), 'success', 
+                    '✅ 已有儲存的 OpenAI API Key');
+            }
+            
+            if (assemblyaiKey) {
+                showStatus(document.getElementById('assemblyaiKeyStatus'), 'success', 
+                    '✅ 已有儲存的 AssemblyAI API Key');
+            }
+        });
+    </script>
+</body>
+</html>
