@@ -194,6 +194,36 @@
             color: #2d3748;
         }
 
+        .karaoke-active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white !important;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            transform: scale(1.05);
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .transcript-word {
+            display: inline-block;
+            margin: 0 2px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .transcript-word:hover {
+            background-color: #e6f7ff;
+            border-radius: 3px;
+            padding: 2px 4px;
+        }
+
+        .highlighted {
+            background-color: #fef3c7;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
         .button-group {
             display: flex;
             gap: 10px;
@@ -554,9 +584,42 @@
             </div>
 
             <div class="player-container" id="playerContainer">
-                <audio id="audioPlayer" controls controlsList="nodownload">
-                    您的瀏覽器不支援音訊播放。
-                </audio>
+                <!-- 播放控制區 -->
+                <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                    <h3 style="color: #667eea; margin-bottom: 15px;">🎵 播放控制</h3>
+                    
+                    <audio id="audioPlayer" style="display: none;">
+                        您的瀏覽器不支援音訊播放。
+                    </audio>
+                    
+                    <div class="button-group" style="margin-bottom: 15px;">
+                        <button onclick="togglePlay()" id="playBtn" style="font-size: 1.2em; padding: 15px 30px;">
+                            ▶️ 播放
+                        </button>
+                        <button onclick="toggleRecord()" id="recordBtn" style="background: #e53e3e; font-size: 1.2em; padding: 15px 30px;">
+                            🎤 開始錄音
+                        </button>
+                        <button onclick="playRecording()" id="playRecordBtn" style="background: #10b981; display: none; font-size: 1.2em; padding: 15px 30px;">
+                            🔊 播放錄音
+                        </button>
+                        <button onclick="compareAudio()" id="compareBtn" style="background: #f59e0b; display: none; font-size: 1.2em; padding: 15px 30px;">
+                            📊 比對發音
+                        </button>
+                    </div>
+                    
+                    <!-- 進度條 -->
+                    <div style="margin-bottom: 15px;">
+                        <input type="range" id="progressBar" min="0" max="100" value="0" 
+                               style="width: 100%; height: 8px; cursor: pointer;"
+                               oninput="seekAudio(this.value)">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.9em; color: #718096;">
+                            <span id="currentTime">0:00</span>
+                            <span id="duration">0:00</span>
+                        </div>
+                    </div>
+                    
+                    <div id="recordingStatus" style="margin-top: 10px;"></div>
+                </div>
 
                 <div class="controls">
                     <div class="control-group">
@@ -586,11 +649,37 @@
                         <label>自訂結束時間（秒）</label>
                         <input type="number" id="loopEnd" min="0" step="1" value="10">
                     </div>
+                    
+                    <div class="control-group">
+                        <label style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" id="karaokeMode" onchange="toggleKaraokeMode()" 
+                                   style="width: auto; height: 20px;">
+                            卡拉 OK 模式
+                        </label>
+                        <small style="color: #718096; margin-top: 5px; display: block;">
+                            開啟後字幕會隨著音訊高亮變色
+                        </small>
+                    </div>
                 </div>
 
                 <div class="section">
                     <h2 class="section-title">📖 逐字稿內容</h2>
                     <div class="transcript-container" id="transcriptDisplay"></div>
+                </div>
+                
+                <!-- 比對視覺化區 -->
+                <div id="comparisonSection" style="display: none; margin-top: 20px;">
+                    <h3 style="color: #667eea; margin-bottom: 15px;">📊 發音比對</h3>
+                    <div style="background: white; padding: 20px; border-radius: 12px;">
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="color: #4a5568; margin-bottom: 10px;">原音波形</h4>
+                            <canvas id="originalWaveform" width="800" height="100" style="width: 100%; border: 1px solid #e2e8f0; border-radius: 4px;"></canvas>
+                        </div>
+                        <div>
+                            <h4 style="color: #4a5568; margin-bottom: 10px;">你的錄音波形</h4>
+                            <canvas id="recordingWaveform" width="800" height="100" style="width: 100%; border: 1px solid #e2e8f0; border-radius: 4px;"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -599,6 +688,13 @@
     <script>
         let audio = document.getElementById('audioPlayer');
         let currentLoopMode = 'none';
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let recordedBlob = null;
+        let isRecording = false;
+        let karaokeEnabled = false;
+        let transcriptWords = [];
+        let karaokeInterval = null;
 
         // API Key 管理
         function saveApiKey(provider) {
@@ -787,7 +883,248 @@
         function displayTranscript(text) {
             const container = document.getElementById('transcriptDisplay');
             const paragraphs = text.split('\n').filter(p => p.trim());
-            container.innerHTML = paragraphs.map(p => `<p>${p}</p>`).join('');
+            
+            // 為卡拉OK模式準備：將文字拆分成單詞
+            const wordsHtml = paragraphs.map((p, pIndex) => {
+                const words = p.split(/(\s+)/).filter(w => w.trim());
+                const wordSpans = words.map((word, wIndex) => {
+                    return `<span class="transcript-word" data-index="${pIndex}-${wIndex}">${word}</span>`;
+                }).join('');
+                return `<p>${wordSpans}</p>`;
+            }).join('');
+            
+            container.innerHTML = wordsHtml;
+            
+            // 儲存單詞元素供卡拉OK使用
+            transcriptWords = Array.from(container.querySelectorAll('.transcript-word'));
+        }
+
+        // 播放/暫停控制
+        function togglePlay() {
+            const btn = document.getElementById('playBtn');
+            if (audio.paused) {
+                audio.play();
+                btn.textContent = '⏸️ 暫停';
+            } else {
+                audio.pause();
+                btn.textContent = '▶️ 播放';
+            }
+        }
+
+        // 進度條控制
+        function seekAudio(value) {
+            const time = (value / 100) * audio.duration;
+            audio.currentTime = time;
+        }
+
+        // 更新進度條和時間顯示
+        audio.addEventListener('timeupdate', function() {
+            const progress = (audio.currentTime / audio.duration) * 100;
+            document.getElementById('progressBar').value = progress || 0;
+            
+            document.getElementById('currentTime').textContent = formatTime(audio.currentTime);
+            document.getElementById('duration').textContent = formatTime(audio.duration);
+            
+            // 卡拉OK效果
+            if (karaokeEnabled) {
+                updateKaraoke();
+            }
+            
+            // 循環播放邏輯
+            if (currentLoopMode !== 'none' && currentLoopMode !== 'custom') {
+                const interval = parseInt(currentLoopMode);
+                const currentTime = audio.currentTime;
+                const segmentStart = Math.floor(currentTime / interval) * interval;
+                const segmentEnd = segmentStart + interval;
+                if (currentTime >= segmentEnd) {
+                    audio.currentTime = segmentStart;
+                }
+            } else if (currentLoopMode === 'custom') {
+                const start = parseFloat(document.getElementById('loopStart').value) || 0;
+                const end = parseFloat(document.getElementById('loopEnd').value) || 10;
+                if (audio.currentTime >= end) {
+                    audio.currentTime = start;
+                }
+            }
+        });
+
+        // 音訊播放結束
+        audio.addEventListener('ended', function() {
+            document.getElementById('playBtn').textContent = '▶️ 播放';
+        });
+
+        // 音訊載入完成
+        audio.addEventListener('loadedmetadata', function() {
+            document.getElementById('duration').textContent = formatTime(audio.duration);
+        });
+
+        // 格式化時間
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // 卡拉OK模式
+        function toggleKaraokeMode() {
+            karaokeEnabled = document.getElementById('karaokeMode').checked;
+            if (!karaokeEnabled) {
+                // 移除所有高亮
+                transcriptWords.forEach(word => {
+                    word.classList.remove('karaoke-active');
+                });
+            }
+        }
+
+        function updateKaraoke() {
+            if (!karaokeEnabled || transcriptWords.length === 0) return;
+            
+            const duration = audio.duration;
+            const currentTime = audio.currentTime;
+            
+            // 簡單的時間比例計算（實際應用中需要更精確的時間戳）
+            const progress = currentTime / duration;
+            const activeIndex = Math.floor(progress * transcriptWords.length);
+            
+            transcriptWords.forEach((word, index) => {
+                if (index === activeIndex) {
+                    word.classList.add('karaoke-active');
+                    // 自動滾動到當前單詞
+                    word.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else if (index < activeIndex) {
+                    word.classList.remove('karaoke-active');
+                    word.style.opacity = '0.6';
+                } else {
+                    word.classList.remove('karaoke-active');
+                    word.style.opacity = '1';
+                }
+            });
+        }
+
+        // 錄音功能
+        async function toggleRecord() {
+            const btn = document.getElementById('recordBtn');
+            const statusDiv = document.getElementById('recordingStatus');
+            
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    recordedChunks = [];
+                    
+                    mediaRecorder.ondataavailable = (e) => {
+                        if (e.data.size > 0) {
+                            recordedChunks.push(e.data);
+                        }
+                    };
+                    
+                    mediaRecorder.onstop = () => {
+                        recordedBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+                        document.getElementById('playRecordBtn').style.display = 'inline-block';
+                        document.getElementById('compareBtn').style.display = 'inline-block';
+                        showStatus(statusDiv, 'success', '✅ 錄音完成！可以播放或比對');
+                    };
+                    
+                    mediaRecorder.start();
+                    isRecording = true;
+                    btn.textContent = '⏹️ 停止錄音';
+                    btn.style.background = '#f59e0b';
+                    showStatus(statusDiv, 'info', '🎤 錄音中...');
+                    
+                    // 同時播放原音
+                    audio.currentTime = 0;
+                    audio.play();
+                    document.getElementById('playBtn').textContent = '⏸️ 暫停';
+                    
+                } catch (error) {
+                    showStatus(statusDiv, 'error', '❌ 無法存取麥克風：' + error.message);
+                }
+            } else {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                isRecording = false;
+                btn.textContent = '🎤 開始錄音';
+                btn.style.background = '#e53e3e';
+                
+                // 停止原音播放
+                audio.pause();
+                document.getElementById('playBtn').textContent = '▶️ 播放';
+            }
+        }
+
+        // 播放錄音
+        function playRecording() {
+            if (recordedBlob) {
+                const audioUrl = URL.createObjectURL(recordedBlob);
+                const recordAudio = new Audio(audioUrl);
+                recordAudio.play();
+            }
+        }
+
+        // 比對音訊
+        async function compareAudio() {
+            if (!recordedBlob) return;
+            
+            document.getElementById('comparisonSection').style.display = 'block';
+            
+            // 繪製波形
+            await drawWaveform(audio.src, 'originalWaveform', '#667eea');
+            await drawWaveform(URL.createObjectURL(recordedBlob), 'recordingWaveform', '#e53e3e');
+            
+            // 滾動到比對區
+            document.getElementById('comparisonSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // 繪製波形
+        async function drawWaveform(audioSrc, canvasId, color) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // 清空畫布
+            ctx.clearRect(0, 0, width, height);
+            
+            try {
+                // 載入音訊
+                const response = await fetch(audioSrc);
+                const arrayBuffer = await response.arrayBuffer();
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                
+                const data = audioBuffer.getChannelData(0);
+                const step = Math.ceil(data.length / width);
+                const amp = height / 2;
+                
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                
+                for (let i = 0; i < width; i++) {
+                    let min = 1.0;
+                    let max = -1.0;
+                    
+                    for (let j = 0; j < step; j++) {
+                        const datum = data[(i * step) + j];
+                        if (datum < min) min = datum;
+                        if (datum > max) max = datum;
+                    }
+                    
+                    const yMin = (1 + min) * amp;
+                    const yMax = (1 + max) * amp;
+                    
+                    ctx.fillRect(i, yMin, 1, yMax - yMin);
+                }
+                
+            } catch (error) {
+                console.error('繪製波形失敗:', error);
+                ctx.fillStyle = '#cbd5e0';
+                ctx.fillRect(0, height / 2 - 2, width, 4);
+                ctx.fillStyle = '#4a5568';
+                ctx.font = '14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('無法載入波形', width / 2, height / 2 + 20);
+            }
         }
 
         // 使用 Whisper API 產生逐字稿
