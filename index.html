@@ -480,6 +480,30 @@
 
                 <!-- 自動產生 -->
                 <div id="auto-tab" class="tab-content">
+                    <div class="input-group">
+                        <label>音訊語言</label>
+                        <select id="audioLanguage" style="padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1em; width: 100%;">
+                            <option value="">自動偵測（推薦）</option>
+                            <option value="en">英文 (English)</option>
+                            <option value="zh">中文 (Chinese)</option>
+                            <option value="ja">日文 (Japanese)</option>
+                            <option value="ko">韓文 (Korean)</option>
+                            <option value="es">西班牙文 (Spanish)</option>
+                            <option value="fr">法文 (French)</option>
+                            <option value="de">德文 (German)</option>
+                            <option value="it">義大利文 (Italian)</option>
+                            <option value="pt">葡萄牙文 (Portuguese)</option>
+                            <option value="ru">俄文 (Russian)</option>
+                            <option value="ar">阿拉伯文 (Arabic)</option>
+                            <option value="hi">印地文 (Hindi)</option>
+                            <option value="th">泰文 (Thai)</option>
+                            <option value="vi">越南文 (Vietnamese)</option>
+                        </select>
+                        <small style="color: #718096; display: block; margin-top: 5px;">
+                            建議選擇「自動偵測」，Whisper 會自動判斷語言
+                        </small>
+                    </div>
+                    
                     <div class="button-group">
                         <button onclick="generateWithWhisper()" id="whisperBtn">
                             🤖 使用 Whisper 產生逐字稿
@@ -771,6 +795,7 @@
             // 從 localStorage 讀取 API Key
             const apiKey = localStorage.getItem('openai_api_key');
             const audioFile = document.getElementById('audioFile').files[0];
+            const language = document.getElementById('audioLanguage').value;
             const statusDiv = document.getElementById('autoStatus');
 
             if (!apiKey) {
@@ -786,13 +811,20 @@
             const btn = document.getElementById('whisperBtn');
             btn.disabled = true;
             btn.textContent = '⏳ 處理中...';
-            showStatus(statusDiv, 'info', '正在上傳並轉錄音訊，這可能需要幾分鐘...');
+            
+            const langText = language ? getLanguageName(language) : '自動偵測';
+            showStatus(statusDiv, 'info', `正在使用 ${langText} 轉錄音訊，這可能需要幾分鐘...`);
 
             try {
                 const formData = new FormData();
                 formData.append('file', audioFile);
                 formData.append('model', 'whisper-1');
-                formData.append('language', 'en');
+                
+                // 只有在指定語言時才加入 language 參數
+                // 不指定時 Whisper 會自動偵測
+                if (language) {
+                    formData.append('language', language);
+                }
 
                 const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
                     method: 'POST',
@@ -825,6 +857,27 @@
         // 顯示狀態訊息
         function showStatus(container, type, message) {
             container.innerHTML = `<div class="status-message ${type}">${message}</div>`;
+        }
+
+        // 取得語言名稱
+        function getLanguageName(code) {
+            const languages = {
+                'en': '英文',
+                'zh': '中文',
+                'ja': '日文',
+                'ko': '韓文',
+                'es': '西班牙文',
+                'fr': '法文',
+                'de': '德文',
+                'it': '義大利文',
+                'pt': '葡萄牙文',
+                'ru': '俄文',
+                'ar': '阿拉伯文',
+                'hi': '印地文',
+                'th': '泰文',
+                'vi': '越南文'
+            };
+            return languages[code] || code;
         }
 
         // 速度控制
