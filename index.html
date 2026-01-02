@@ -585,7 +585,7 @@
 
             <div class="player-container" id="playerContainer">
                 <!-- 播放控制區 -->
-                <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                     <h3 style="color: #667eea; margin-bottom: 15px;">🎵 播放控制</h3>
                     
                     <audio id="audioPlayer" style="display: none;">
@@ -661,6 +661,17 @@
                         </small>
                         <small style="color: #f59e0b; margin-top: 3px; display: block; font-weight: 500;" id="karaokeHint">
                             💡 使用 Whisper API 產生逐字稿可獲得精確同步
+                        </small>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" id="autoScrollMode" checked
+                                   style="width: auto; height: 20px;">
+                            自動滾動
+                        </label>
+                        <small style="color: #718096; margin-top: 5px; display: block;">
+                            跟隨當前播放位置（如果覺得晃動可以關閉）
                         </small>
                     </div>
                 </div>
@@ -1040,6 +1051,7 @@
             if (!karaokeEnabled || transcriptWords.length === 0) return;
             
             const currentTime = audio.currentTime;
+            let currentActiveWord = null;
             
             // 如果有精確的時間戳記，使用它們
             if (window.transcriptTimestamps && window.transcriptTimestamps.length > 0) {
@@ -1049,10 +1061,11 @@
                     
                     if (currentTime >= start && currentTime <= end) {
                         // 當前正在說的單詞
-                        wordElement.classList.add('karaoke-active');
+                        if (!wordElement.classList.contains('karaoke-active')) {
+                            wordElement.classList.add('karaoke-active');
+                            currentActiveWord = wordElement;
+                        }
                         wordElement.style.opacity = '1';
-                        // 自動滾動
-                        wordElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     } else if (currentTime > end) {
                         // 已經說過的單詞
                         wordElement.classList.remove('karaoke-active');
@@ -1071,8 +1084,10 @@
                 
                 transcriptWords.forEach((word, index) => {
                     if (index === activeIndex) {
-                        word.classList.add('karaoke-active');
-                        word.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        if (!word.classList.contains('karaoke-active')) {
+                            word.classList.add('karaoke-active');
+                            currentActiveWord = word;
+                        }
                     } else if (index < activeIndex) {
                         word.classList.remove('karaoke-active');
                         word.style.opacity = '0.6';
@@ -1081,6 +1096,30 @@
                         word.style.opacity = '1';
                     }
                 });
+            }
+            
+            // 只在切換到新單詞時才滾動，減少晃動
+            if (currentActiveWord && currentActiveWord !== window.lastActiveWord) {
+                // 檢查是否啟用自動滾動
+                const autoScrollEnabled = document.getElementById('autoScrollMode').checked;
+                
+                if (autoScrollEnabled) {
+                    // 使用更溫和的滾動方式
+                    const rect = currentActiveWord.getBoundingClientRect();
+                    const container = document.getElementById('transcriptDisplay');
+                    const containerRect = container.getBoundingClientRect();
+                    
+                    // 只有當單詞接近容器邊緣時才滾動
+                    if (rect.top < containerRect.top + 50 || rect.bottom > containerRect.bottom - 50) {
+                        currentActiveWord.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'center',
+                            inline: 'nearest'
+                        });
+                    }
+                }
+                
+                window.lastActiveWord = currentActiveWord;
             }
         }
 
@@ -1112,12 +1151,18 @@
                     isRecording = true;
                     btn.textContent = '⏹️ 停止錄音';
                     btn.style.background = '#f59e0b';
-                    showStatus(statusDiv, 'info', '🎤 錄音中...');
                     
-                    // 同時播放原音
-                    audio.currentTime = 0;
-                    audio.play();
-                    document.getElementById('playBtn').textContent = '⏸️ 暫停';
+                    // 詢問是否同步播放原音
+                    const playOriginal = confirm('要同時播放原音嗎？\n\n點「確定」= 同時播放原音（適合跟讀）\n點「取消」= 只錄音不播放（適合背誦）');
+                    
+                    if (playOriginal) {
+                        audio.currentTime = 0;
+                        audio.play();
+                        document.getElementById('playBtn').textContent = '⏸️ 暫停';
+                        showStatus(statusDiv, 'info', '🎤 錄音中... 原音同步播放');
+                    } else {
+                        showStatus(statusDiv, 'info', '🎤 錄音中... 請開始朗讀');
+                    }
                     
                 } catch (error) {
                     showStatus(statusDiv, 'error', '❌ 無法存取麥克風：' + error.message);
@@ -1129,9 +1174,11 @@
                 btn.textContent = '🎤 開始錄音';
                 btn.style.background = '#e53e3e';
                 
-                // 停止原音播放
-                audio.pause();
-                document.getElementById('playBtn').textContent = '▶️ 播放';
+                // 停止原音播放（如果正在播放）
+                if (!audio.paused) {
+                    audio.pause();
+                    document.getElementById('playBtn').textContent = '▶️ 播放';
+                }
             }
         }
 
