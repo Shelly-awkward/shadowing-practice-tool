@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Shadowing V4.2 (File Fix)</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; background: #121212; color: #e0e0e0; padding: 16px; display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; }
+        h1 { font-size: 1.4rem; text-align: center; color: #60a5fa; margin-bottom: 20px; }
+        .card { background: #252525; padding: 20px; border-radius: 16px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .btn { background: #2563eb; color: white; border: none; padding: 18px; border-radius: 12px; font-size: 1.2rem; width: 100%; font-weight: bold; margin-top: 10px; }
+        .btn:disabled { background: #404040; color: #888; }
+        .btn-control { background: #dc2626; }
+        .btn-control.paused { background: #059669; }
+        .hidden { display: none !important; }
+        input[type="file"], input[type="password"] { font-size: 1rem; padding: 10px; width: 100%; box-sizing: border-box; margin-bottom: 10px; border-radius: 8px; border: 1px solid #444; background: #333; color: white; }
+        
+        #statusBox { font-size: 1.3rem; text-align: center; padding: 20px; border-radius: 12px; background: #333; margin: 10px 0; border: 2px solid #444; }
+        .mode-listen { border-color: #3b82f6; color: #bfdbfe; }
+        .mode-record { border-color: #ef4444; color: #fecaca; }
+        .mode-replay { border-color: #10b981; color: #a7f3d0; }
+        .mode-wait   { border-color: #9ca3af; color: #e5e7eb; }
+        
+        #currentSentence { font-size: 1.2rem; padding: 15px; border-left: 4px solid #f59e0b; background: #2a2a2a; min-height: 60px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+
+    <h1>🔓 Shadowing V4.2 (File Fix)</h1>
+
+    <div id="apiKeyPanel" class="card hidden">
+        <h3 style="margin-top:0;">🔑 設定 API Key</h3>
+        <p style="color:#aaa; font-size:0.9rem;">Key 儲存於手機瀏覽器，不會上傳。</p>
+        <input type="password" id="apiKeyInput" placeholder="sk-proj-...">
+        <button id="saveKeyBtn" class="btn" style="background:#059669;">儲存並開始</button>
+    </div>
+
+    <div id="setupPanel" class="card hidden">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <label style="font-weight:bold;">選擇 MP3 音檔：</label>
+            <button onclick="clearKey()" style="background:none; border:none; color:#ef4444; font-size:0.9rem; text-decoration:underline;">重設 Key</button>
+        </div>
+        
+        <input type="file" id="audioInput">
+        
+        <p style="color:#888; font-size:0.9rem; margin-top:10px;">* 已解除檔案過濾限制<br>* 原音循環 3 次 + iOS 優化</p>
+        <button id="startBtn" class="btn" disabled>開始處理 (AI)</button>
+    </div>
+
+    <div id="practicePanel" class="hidden">
+        <div style="text-align:right; color:#aaa; font-size:0.9rem;" id="progressText">0 / 0</div>
+        <div id="statusBox">準備中...</div>
+        <div id="currentSentence">...</div>
+        <div style="margin-top:auto;">
+            <button id="controlBtn" class="btn btn-control">⏸️ 暫停練習</button>
+            <button id="resetBtn" class="btn" style="background:#555; margin-top:10px;">❌ 結束</button>
+        </div>
+    </div>
+
+    <audio id="audioPlayer" playsinline webkit-playsinline></audio>
+    <audio id="recordingPlayer" playsinline webkit-playsinline></audio>
+
+<script>
+let USER_API_KEY = "";
+const REPEAT_COUNT = 3; 
+
+const state = { sentences: [], currentIndex: 0, audioBlob: null, isPaused: false, wakeLock: null };
+const dom = {
+    apiKeyPanel: document.getElementById('apiKeyPanel'), apiKeyInput: document.getElementById('apiKeyInput'), saveKeyBtn: document.getElementById('saveKeyBtn'),
+    setupPanel: document.getElementById('setupPanel'), practicePanel: document.getElementById('practicePanel'),
+    audioInput: document.getElementById('audioInput'), startBtn: document.getElementById('startBtn'),
+    statusBox: document.getElementById('statusBox'), currentSentence: document.getElementById('currentSentence'), progressText: document.getElementById('progressText'),
+    controlBtn: document.getElementById('controlBtn'), resetBtn: document.getElementById('resetBtn'),
+    audioPlayer: document.getElementById('audioPlayer'), recordingPlayer: document.getElementById('recordingPlayer')
+};
+
+// --- 初始化 ---
+(function init() {
+    const savedKey = localStorage.getItem("my_openai_key");
+    if (savedKey && savedKey.startsWith("sk-")) {
+        USER_API_KEY = savedKey;
+        showSetup();
+    } else {
+        dom.apiKeyPanel.classList.remove('hidden');
+    }
+})();
+
+dom.saveKeyBtn.addEventListener('click', () => {
+    const inputKey = dom.apiKeyInput.value.trim();
+    if (inputKey.includes("sk-") && inputKey.length > 20) {
+        localStorage.setItem("my_openai_key", inputKey);
+        USER_API_KEY = inputKey;
+        dom.apiKeyPanel.classList.add('hidden');
+        showSetup();
+    } else {
+        alert("Key 格式不正確 (需含 sk-)");
+    }
+});
+
+window.clearKey = () => {
+    if(confirm("清除 Key？")) { localStorage.removeItem("my_openai_key"); location.reload(); }
+};
+
+function showSetup() { dom.setupPanel.classList.remove('hidden'); }
+
+dom.audioInput.addEventListener('change', (e) => {
+    if (e.target.files[0]) {
+        state.audioBlob = e.target.files[0];
+        
+        // 簡單檢查一下是不是音訊檔
+        if (!state.audioBlob.type.startsWith('audio/') && !state.audioBlob.name.endsWith('.mp3') && !state.audioBlob.name.endsWith('.m4a') && !state.audioBlob.name.endsWith('.wav')) {
+            alert("⚠️ 注意：你選的可能不是音訊檔，但我們可以試試看！");
+        }
+
+        dom.audioPlayer.src = URL.createObjectURL(state.audioBlob);
+        dom.startBtn.disabled = false;
+        dom.startBtn.textContent = "🚀 開始 AI 分析";
+    }
+});
+
+dom.startBtn.addEventListener('click', async () => {
+    if (state.audioBlob.size > 25 * 1024 * 1024) { alert("檔案超過 25MB！請壓縮。"); return; }
+
+    // iOS Audio Unlock (重要!)
+    dom.audioPlayer.play().then(() => {
+        dom.audioPlayer.pause();
+        dom.audioPlayer.currentTime = 0;
+    }).catch(e => console.log("Unlock info:", e));
+    
+    dom.recordingPlayer.play().then(() => { dom.recordingPlayer.pause(); }).catch(()=>{});
+
+    dom.startBtn.disabled = true;
+    dom.startBtn.textContent = "AI 處理中...";
+    
+    try {
+        if ('wakeLock' in navigator) try { state.wakeLock = await navigator.wakeLock.request('screen'); } catch(e){}
+        await generateTranscript();
+        
+        if (state.sentences.length === 0) throw new Error("無效內容");
+
+        dom.setupPanel.classList.add('hidden');
+        dom.practicePanel.classList.remove('hidden');
+        state.isPaused = false;
+        runLoop();
+    } catch (err) {
+        alert("錯誤：" + err.message);
+        dom.startBtn.disabled = false;
+        dom.startBtn.textContent = "重試";
+    }
+});
+
+// --- 循環邏輯 ---
+async function runLoop() {
+    while (state.currentIndex < state.sentences.length) {
+        if (state.isPaused) return;
+        const s = state.sentences[state.currentIndex];
+        updateUI(s);
+
+        for (let i = 1; i <= REPEAT_COUNT; i++) {
+            if (state.isPaused) return;
+            setStatus('listen', `👂 原音 (${i}/${REPEAT_COUNT})`);
+            await playAudioSegment(s.start, s.end);
+            await wait(800);
+        }
+
+        if (state.isPaused) return;
+        setStatus('record', '🎤 請跟讀');
+        const duration = (s.end - s.start) * 1000 + 1000;
+        await recordAudio(duration);
+
+        if (state.isPaused) return;
+        setStatus('replay', '🎧 聽你的發音');
+        await playUserRecording();
+
+        if (state.isPaused) return;
+        setStatus('wait', '⏳ 下一句...');
+        await wait(1500);
+
+        if (!state.isPaused) state.currentIndex++;
+    }
+    if (state.currentIndex >= state.sentences.length) { setStatus('wait', '🎉 結束！'); alert("恭喜完成！"); }
+}
+
+// --- 控制 ---
+dom.controlBtn.addEventListener('click', () => {
+    if (state.isPaused) {
+        state.isPaused = false;
+        dom.controlBtn.textContent = "⏸️ 暫停";
+        dom.controlBtn.classList.remove('paused');
+        if (dom.statusBox.textContent.includes('暫停')) runLoop(); 
+    } else {
+        state.isPaused = true;
+        dom.controlBtn.textContent = "▶️ 繼續";
+        dom.controlBtn.classList.add('paused');
+        dom.audioPlayer.pause();
+        dom.recordingPlayer.pause();
+        setStatus('wait', '🛑 已暫停');
+    }
+});
+dom.resetBtn.addEventListener('click', () => { if(confirm('結束嗎？')) location.reload(); });
+
+// --- API ---
+async function generateTranscript() {
+    const formData = new FormData();
+    formData.append('file', state.audioBlob);
+    formData.append('model', 'whisper-1');
+    formData.append('response_format', 'verbose_json');
+
+    const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${USER_API_KEY}` },
+        body: formData
+    });
+
+    if (!res.ok) throw new Error(`API 錯誤 (${res.status})`);
+    const data = await res.json();
+    if (data.segments) {
+        state.sentences = data.segments.map(seg => ({ text: seg.text.trim(), start: seg.start, end: seg.end }));
+    } else {
+        state.sentences = [{ text: data.text, start: 0, end: dom.audioPlayer.duration }];
+    }
+}
+
+// --- 工具 (iOS Compatible) ---
+function playAudioSegment(start, end) {
+    return new Promise(resolve => {
+        if (state.isPaused) { resolve(); return; }
+        dom.audioPlayer.currentTime = start;
+        dom.audioPlayer.play().catch(e=>{});
+        
+        const check = setInterval(() => {
+            if (state.isPaused) { dom.audioPlayer.pause(); clearInterval(check); resolve(); return; }
+            if (dom.audioPlayer.currentTime >= end || dom.audioPlayer.ended) { dom.audioPlayer.pause(); clearInterval(check); resolve(); }
+        }, 50);
+    });
+}
+
+let globalUserBlob = null;
+async function recordAudio(ms) {
+    if (state.isPaused) return;
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream);
+        const chunks = [];
+        mediaRecorder.ondataavailable = e => chunks.push(e.data);
+        mediaRecorder.start();
+
+        return new Promise(resolve => {
+            let stopped = false;
+            const timer = setTimeout(() => { if (!stopped && mediaRecorder.state === 'recording') mediaRecorder.stop(); }, ms);
+            const checkPause = setInterval(() => { if (state.isPaused && !stopped) { clearTimeout(timer); if (mediaRecorder.state === 'recording') mediaRecorder.stop(); stopped = true; } }, 100);
+            mediaRecorder.onstop = () => { 
+                clearInterval(checkPause); 
+                stream.getTracks().forEach(t => t.stop()); 
+                globalUserBlob = new Blob(chunks, {type:'audio/mp4'}); 
+                dom.recordingPlayer.src = URL.createObjectURL(globalUserBlob);
+                resolve(); 
+            };
+        });
+    } catch (e) { console.error(e); resolve(); }
+}
+
+function playUserRecording() {
+    return new Promise(resolve => {
+        if (state.isPaused || !dom.recordingPlayer.src) { resolve(); return; }
+        dom.recordingPlayer.play().catch(e => resolve());
+        dom.recordingPlayer.onended = resolve;
+    });
+}
+
+function setStatus(mode, text) { dom.statusBox.className = `mode-${mode}`; dom.statusBox.textContent = text; }
+function updateUI(s) { dom.currentSentence.textContent = s.text; dom.progressText.textContent = `${state.currentIndex + 1} / ${state.sentences.length}`; }
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>
