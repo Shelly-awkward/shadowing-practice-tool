@@ -270,26 +270,48 @@
                         </button>
                         <button onclick="switchTranscriptMode('auto')" id="autoBtn"
                                 style="flex: 1; padding: 10px; font-size: 1em; background: #6b7280;">
-                            🤖 自動產生
+                            🤖 自動產生（含時間）
                         </button>
                     </div>
 
                     <!-- 手動輸入 -->
                     <div id="manualTranscript">
+                        <div class="info-box" style="margin-bottom: 15px;">
+                            <p><strong>💡 兩種格式：</strong></p>
+                            <ol style="margin-left: 20px; margin-top: 5px; line-height: 1.8;">
+                                <li><strong>純文字</strong>（整個音檔當一句）：<br>
+                                    <code>こんにちは、皆さん。</code></li>
+                                <li><strong>帶時間戳記</strong>（推薦）：<br>
+                                    <code>0:00-0:02 こんにちは。<br>
+                                    0:03-0:05 今日は。</code></li>
+                            </ol>
+                        </div>
+
                         <div class="input-group">
                             <textarea id="transcript" placeholder="每一句請分一行，例如：
 
+方式1 - 純文字（整個音檔）：
 こんにちは、皆さん。
 今日はいい天気ですね。
-一緒に勉強しましょう。"></textarea>
+
+方式2 - 帶時間戳記（推薦）：
+0:00-0:02 こんにちは、皆さん。
+0:03-0:06 今日はいい天気ですね。
+0:07-0:10 一緒に勉強しましょう。"></textarea>
                         </div>
                     </div>
 
                     <!-- 自動產生 -->
                     <div id="autoTranscript" style="display: none;">
                         <div class="info-box" style="margin-bottom: 15px;">
-                            <p><strong>💡 自動產生逐字稿：</strong></p>
-                            <p style="margin-top: 5px;">使用 OpenAI Whisper API 自動轉錄音訊（約 $0.006/分鐘）</p>
+                            <p><strong>💡 自動產生逐字稿 + 時間戳記：</strong></p>
+                            <p style="margin-top: 5px;">使用 OpenAI Whisper API 自動：</p>
+                            <ul style="margin-left: 20px; margin-top: 5px;">
+                                <li>轉錄音訊內容</li>
+                                <li>自動分句</li>
+                                <li>標記每句的開始/結束時間</li>
+                            </ul>
+                            <p style="margin-top: 5px; color: #f59e0b;">約 $0.006/分鐘</p>
                         </div>
 
                         <div class="input-group">
@@ -315,7 +337,7 @@
                         </div>
 
                         <button onclick="generateTranscript()" id="generateBtn" style="width: 100%; margin-bottom: 15px;">
-                            🤖 產生逐字稿
+                            🤖 產生逐字稿（含時間戳記）
                         </button>
 
                         <div id="autoStatus"></div>
@@ -423,12 +445,15 @@
 
             btn.disabled = true;
             btn.textContent = '⏳ 處理中...';
-            statusDiv.innerHTML = '<div style="color: #0ea5e9; padding: 10px; background: #e0f2fe; border-radius: 8px;">🔄 正在轉錄音訊，請稍候...</div>';
+            statusDiv.innerHTML = '<div style="color: #0ea5e9; padding: 10px; background: #e0f2fe; border-radius: 8px;">🔄 正在轉錄音訊並提取時間戳記，請稍候...</div>';
 
             try {
                 const formData = new FormData();
                 formData.append('file', audioFile);
                 formData.append('model', 'whisper-1');
+                formData.append('response_format', 'verbose_json');
+                formData.append('timestamp_granularities[]', 'word');
+                
                 if (language) {
                     formData.append('language', language);
                 }
@@ -448,17 +473,109 @@
 
                 const result = await response.json();
                 
-                // 將結果放入文字框
-                document.getElementById('generatedTranscript').value = result.text;
+                // 智能分句
+                let formattedText = '';
+                if (result.words && result.words.length > 0) {
+                    const sentences = splitIntoSentences(result.words);
+                    formattedText = sentences.map(sentence => {
+                        const start = formatTimestamp(sentence.start);
+                        const end = formatTimestamp(sentence.end);
+                        return `${start}-${end} ${sentence.text}`;
+                    }).join('\n');
+                    
+                    statusDiv.innerHTML = `<div style="color: #10b981; padding: 10px; background: #d1fae5; border-radius: 8px;">✅ 已產生 ${sentences.length} 句！包含精確時間戳記</div>`;
+                } else {
+                    // 沒有 words，使用純文字
+                    formattedText = result.text;
+                    statusDiv.innerHTML = '<div style="color: #f59e0b; padding: 10px; background: #fef3c7; border-radius: 8px;">⚠️ 已產生逐字稿，但未包含時間戳記</div>';
+                }
                 
-                statusDiv.innerHTML = '<div style="color: #10b981; padding: 10px; background: #d1fae5; border-radius: 8px;">✅ 逐字稿產生成功！請檢查並編輯後開始練習</div>';
+                // 將結果放入文字框
+                document.getElementById('generatedTranscript').value = formattedText;
 
             } catch (error) {
                 statusDiv.innerHTML = `<div style="color: #ef4444; padding: 10px; background: #fee2e2; border-radius: 8px;">❌ 錯誤: ${error.message}</div>`;
             } finally {
                 btn.disabled = false;
-                btn.textContent = '🤖 產生逐字稿';
+                btn.textContent = '🤖 產生逐字稿（含時間戳記）';
             }
+        }
+
+        // 智能分句（根據標點符號）
+        function splitIntoSentences(words) {
+            const sentences = [];
+            let currentSentence = {
+                text: '',
+                start: null,
+                end: null,
+                words: []
+            };
+
+            // 句子結束的標點符號
+            const sentenceEnders = /[.。!！?？\n]/;
+
+            for (let i = 0; i < words.length; i++) {
+                const wordData = words[i];
+                const word = wordData.word.trim();
+
+                // 設定句子開始時間
+                if (currentSentence.start === null) {
+                    currentSentence.start = wordData.start;
+                }
+
+                // 加入單詞
+                currentSentence.words.push(word);
+                currentSentence.end = wordData.end;
+
+                // 檢查是否句子結束
+                const isLastWord = i === words.length - 1;
+                const endsWithPunctuation = sentenceEnders.test(word);
+                
+                // 句子結束條件：
+                // 1. 有句子結束標點
+                // 2. 是最後一個字
+                // 3. 累積了 15+ 個字（避免句子太長）
+                if (endsWithPunctuation || isLastWord || currentSentence.words.length >= 15) {
+                    currentSentence.text = currentSentence.words.join(' ').trim();
+                    
+                    if (currentSentence.text) {
+                        sentences.push({
+                            text: currentSentence.text,
+                            start: currentSentence.start,
+                            end: currentSentence.end
+                        });
+                    }
+
+                    // 重置
+                    currentSentence = {
+                        text: '',
+                        start: null,
+                        end: null,
+                        words: []
+                    };
+                }
+            }
+
+            // 處理剩餘的文字
+            if (currentSentence.words.length > 0) {
+                currentSentence.text = currentSentence.words.join(' ').trim();
+                if (currentSentence.text) {
+                    sentences.push({
+                        text: currentSentence.text,
+                        start: currentSentence.start,
+                        end: currentSentence.end
+                    });
+                }
+            }
+
+            return sentences;
+        }
+
+        // 格式化時間戳記
+        function formatTimestamp(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
         }
 
         // 開始練習
@@ -483,10 +600,39 @@
                 return;
             }
 
-            // 分割句子
-            sentences = transcript.split('\n').filter(s => s.trim());
+            // 分割並解析句子（支援時間戳記）
+            const lines = transcript.split('\n').filter(s => s.trim());
+            sentences = [];
+            
+            for (const line of lines) {
+                // 檢查是否有時間戳記格式: 0:00-0:02 文字
+                const timestampMatch = line.match(/^(\d+):(\d+)-(\d+):(\d+)\s+(.+)$/);
+                
+                if (timestampMatch) {
+                    // 有時間戳記
+                    const startMins = parseInt(timestampMatch[1]);
+                    const startSecs = parseInt(timestampMatch[2]);
+                    const endMins = parseInt(timestampMatch[3]);
+                    const endSecs = parseInt(timestampMatch[4]);
+                    const text = timestampMatch[5].trim();
+                    
+                    sentences.push({
+                        text: text,
+                        start: startMins * 60 + startSecs,
+                        end: endMins * 60 + endSecs
+                    });
+                } else {
+                    // 沒有時間戳記，使用完整音訊
+                    sentences.push({
+                        text: line.trim(),
+                        start: null,
+                        end: null
+                    });
+                }
+            }
+            
             if (sentences.length === 0) {
-                alert('逐字稿格式錯誤，請每句分一行！');
+                alert('逐字稿格式錯誤！');
                 return;
             }
 
@@ -535,10 +681,15 @@
                     className += ' current';
                 }
                 
+                const text = typeof sentence === 'string' ? sentence : sentence.text;
+                const timeInfo = (sentence.start !== null && sentence.start !== undefined) 
+                    ? ` <span style="color: #9ca3af; font-size: 0.9em;">[${formatTimestamp(sentence.start)}-${formatTimestamp(sentence.end)}]</span>` 
+                    : '';
+                
                 return `
                     <div class="${className}">
                         <span style="color: #9ca3af; margin-right: 10px;">${index + 1}.</span>
-                        ${sentence}
+                        ${text}${timeInfo}
                     </div>
                 `;
             }).join('');
@@ -570,13 +721,37 @@
             await sleep(500);
         }
 
-        // 播放音訊
+        // 播放音訊（支援時間片段）
         function playAudio() {
             return new Promise((resolve) => {
                 const audio = document.getElementById('audioPlayer');
-                audio.currentTime = 0;
-                audio.play();
-                audio.onended = resolve;
+                const currentSentence = sentences[currentIndex];
+                
+                // 如果有時間戳記，播放片段
+                if (currentSentence.start !== null && currentSentence.start !== undefined) {
+                    audio.currentTime = currentSentence.start;
+                    
+                    const checkTime = setInterval(() => {
+                        if (audio.currentTime >= currentSentence.end) {
+                            clearInterval(checkTime);
+                            audio.pause();
+                            resolve();
+                        }
+                    }, 100);
+                    
+                    audio.play();
+                    
+                    // 備用：如果音訊結束了
+                    audio.onended = () => {
+                        clearInterval(checkTime);
+                        resolve();
+                    };
+                } else {
+                    // 沒有時間戳記，播放完整音訊
+                    audio.currentTime = 0;
+                    audio.play();
+                    audio.onended = resolve;
+                }
             });
         }
 
@@ -606,13 +781,24 @@
 
                     mediaRecorder.start();
 
-                    // 錄音時間 = 音訊時長
-                    const audio = document.getElementById('audioPlayer');
+                    // 計算錄音時長
+                    const currentSentence = sentences[currentIndex];
+                    let recordDuration;
+                    
+                    if (currentSentence.start !== null && currentSentence.start !== undefined) {
+                        // 有時間戳記，錄音時長 = 該句時長
+                        recordDuration = (currentSentence.end - currentSentence.start) * 1000;
+                    } else {
+                        // 沒有時間戳記，使用音訊總時長
+                        const audio = document.getElementById('audioPlayer');
+                        recordDuration = audio.duration * 1000;
+                    }
+                    
                     setTimeout(() => {
                         if (mediaRecorder.state === 'recording') {
                             mediaRecorder.stop();
                         }
-                    }, audio.duration * 1000);
+                    }, recordDuration);
                 });
             } catch (error) {
                 alert('無法存取麥克風：' + error.message);
