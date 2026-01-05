@@ -346,6 +346,11 @@
                             <label>產生的逐字稿（可編輯）</label>
                             <textarea id="generatedTranscript" placeholder="點上方按鈕自動產生..." style="min-height: 150px;"></textarea>
                         </div>
+
+                        <button onclick="testParsing()" style="background: #6b7280; width: 100%; margin-top: 10px;">
+                            🔍 測試解析結果
+                        </button>
+                        <div id="parseTest" style="margin-top: 10px;"></div>
                     </div>
                 </div>
 
@@ -578,6 +583,53 @@
             return `${mins}:${secs.toString().padStart(2, '0')}`;
         }
 
+        // 測試解析功能
+        function testParsing() {
+            const transcript = document.getElementById('generatedTranscript').value.trim();
+            const testDiv = document.getElementById('parseTest');
+            
+            if (!transcript) {
+                testDiv.innerHTML = '<div style="color: #ef4444; padding: 10px; background: #fee2e2; border-radius: 8px;">請先產生逐字稿</div>';
+                return;
+            }
+
+            const lines = transcript.split('\n').filter(s => s.trim());
+            let html = '<div style="background: #f7fafc; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9em;">';
+            html += `<strong>解析結果（共 ${lines.length} 行）：</strong><br><br>`;
+            
+            lines.forEach((line, index) => {
+                const timestampMatch = line.match(/^(\d+):(\d+)-(\d+):(\d+)\s+(.+)$/);
+                
+                if (timestampMatch) {
+                    const startMins = parseInt(timestampMatch[1]);
+                    const startSecs = parseInt(timestampMatch[2]);
+                    const endMins = parseInt(timestampMatch[3]);
+                    const endSecs = parseInt(timestampMatch[4]);
+                    const text = timestampMatch[5];
+                    
+                    const startTotal = startMins * 60 + startSecs;
+                    const endTotal = endMins * 60 + endSecs;
+                    const duration = endTotal - startTotal;
+                    
+                    html += `<div style="margin-bottom: 10px; padding: 8px; background: white; border-left: 3px solid #10b981;">`;
+                    html += `<strong>${index + 1}.</strong> `;
+                    html += `<span style="color: #10b981;">[${startTotal}s - ${endTotal}s]</span> `;
+                    html += `<span style="color: #9ca3af;">(長度: ${duration.toFixed(1)}s)</span><br>`;
+                    html += `<span style="color: #4a5568;">${text}</span>`;
+                    html += `</div>`;
+                } else {
+                    html += `<div style="margin-bottom: 10px; padding: 8px; background: white; border-left: 3px solid #f59e0b;">`;
+                    html += `<strong>${index + 1}.</strong> `;
+                    html += `<span style="color: #f59e0b;">[無時間戳記]</span><br>`;
+                    html += `<span style="color: #4a5568;">${line}</span>`;
+                    html += `</div>`;
+                }
+            });
+            
+            html += '</div>';
+            testDiv.innerHTML = html;
+        }
+
         // 開始練習
         function startPractice() {
             const audioFile = document.getElementById('audioFile').files[0];
@@ -710,13 +762,18 @@
             const statusBox = document.getElementById('statusBox');
             statusBox.className = 'status-box listening';
             
+            const currentSentence = sentences[currentIndex];
+            const debugInfo = typeof currentSentence === 'string' 
+                ? `純文字模式` 
+                : `時間: ${currentSentence.start}s - ${currentSentence.end}s (長度: ${(currentSentence.end - currentSentence.start).toFixed(1)}s)`;
+            
             // 第一次
-            statusBox.innerHTML = '<h2>🎵 第 1 次播放</h2><p>請仔細聆聽</p>';
+            statusBox.innerHTML = `<h2>🎵 第 1 次播放</h2><p>請仔細聆聽</p><small style="color: #9ca3af;">${debugInfo}</small>`;
             await playAudio();
             await sleep(500);
 
             // 第二次
-            statusBox.innerHTML = '<h2>🎵 第 2 次播放</h2><p>準備跟讀</p>';
+            statusBox.innerHTML = `<h2>🎵 第 2 次播放</h2><p>準備跟讀</p><small style="color: #9ca3af;">${debugInfo}</small>`;
             await playAudio();
             await sleep(500);
         }
@@ -727,27 +784,41 @@
                 const audio = document.getElementById('audioPlayer');
                 const currentSentence = sentences[currentIndex];
                 
-                // 如果有時間戳記，播放片段
-                if (currentSentence.start !== null && currentSentence.start !== undefined) {
+                // 檢查是否有時間戳記
+                const hasTimestamp = currentSentence && 
+                                   currentSentence.start !== null && 
+                                   currentSentence.start !== undefined &&
+                                   currentSentence.end !== null &&
+                                   currentSentence.end !== undefined;
+                
+                if (hasTimestamp) {
+                    // 有時間戳記，播放片段
+                    console.log(`播放片段: ${currentSentence.start}s - ${currentSentence.end}s`);
+                    console.log(`內容: ${currentSentence.text}`);
+                    
                     audio.currentTime = currentSentence.start;
+                    audio.play();
                     
                     const checkTime = setInterval(() => {
+                        console.log(`當前播放時間: ${audio.currentTime.toFixed(2)}s / 目標結束: ${currentSentence.end}s`);
+                        
                         if (audio.currentTime >= currentSentence.end) {
+                            console.log('到達結束時間，停止播放');
                             clearInterval(checkTime);
                             audio.pause();
                             resolve();
                         }
-                    }, 100);
+                    }, 50); // 每 50ms 檢查一次，更精確
                     
-                    audio.play();
-                    
-                    // 備用：如果音訊結束了
+                    // 備用：如果音訊自然結束
                     audio.onended = () => {
+                        console.log('音訊自然結束');
                         clearInterval(checkTime);
                         resolve();
                     };
                 } else {
                     // 沒有時間戳記，播放完整音訊
+                    console.log('沒有時間戳記，播放完整音訊');
                     audio.currentTime = 0;
                     audio.play();
                     audio.onended = resolve;
